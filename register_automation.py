@@ -245,7 +245,7 @@ def run_registration():
         if proxy_settings:
             browser_args["proxy"] = proxy_settings
             
-        browser = p.chromium.launch(headless=False, **browser_args)
+        browser = p.chromium.launch(headless=True, **browser_args)
         
         context = browser.new_context(
             viewport={"width": 1280, "height": 800},
