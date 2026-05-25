@@ -248,13 +248,39 @@ def run_registration():
             print(f"Error rotating proxy: {err}")
 
     with sync_playwright() as p:
-        browser_args = {}
+        browser_args = {
+            # VPS Optimized parameters
+            "args": [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-accelerated-2d-canvas",
+                "--disable-gpu",
+                "--no-first-run",
+                "--no-zygote",
+                "--single-process"
+            ]
+        }
         if proxy_settings:
             browser_args["proxy"] = proxy_settings
             
-        browser = p.chromium.launch(headless=False, **browser_args)
-        context = browser.new_context()
+        # Run headless=True by default for headless VPS environments
+        browser = p.chromium.launch(headless=True, **browser_args)
+        
+        # Configure context with standard screen sizes and block heavy resources (like images/fonts) to save VPS bandwidth
+        context = browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        )
         page = context.new_page()
+        
+        # Block images and stylesheets/media files if possible to speed up page loading on VPS instances
+        def route_handler(route):
+            if route.request.resource_type in ["image", "media", "font"]:
+                route.abort()
+            else:
+                route.continue_()
+        page.route("**/*", route_handler)
 
         try:
             # Step 1: Open the registration page
