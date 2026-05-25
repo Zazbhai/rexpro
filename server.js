@@ -171,8 +171,10 @@ async function runWorker(workerId) {
                 break;
             }
 
-            broadcastLog(`[Worker ${workerId}] Sleeping for 10 seconds before next cycle...`);
-            await new Promise(resolve => setTimeout(resolve, 10000));
+            const config = botModule.loadConfig();
+            const loopDelay = config.LOOP_DELAY !== undefined ? parseInt(config.LOOP_DELAY) : 2;
+            broadcastLog(`[Worker ${workerId}] Sleeping for ${loopDelay} seconds before next cycle...`);
+            await new Promise(resolve => setTimeout(resolve, loopDelay * 1000));
         }
     } catch (err) {
         errorCount++;

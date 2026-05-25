@@ -214,6 +214,22 @@
                         </div>
 
                         <div class="form-group">
+                            <label for="cfg-loop-delay">Loop Cycle Sleep Delay (Seconds)</label>
+                            <div class="input-with-icon">
+                                <i class="fa-solid fa-hourglass-half"></i>
+                                <input type="number" id="cfg-loop-delay" min="0" max="60" placeholder="e.g. 2" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cfg-otp-poll-interval">OTP API Poll Interval (Seconds)</label>
+                            <div class="input-with-icon">
+                                <i class="fa-solid fa-arrows-spin"></i>
+                                <input type="number" id="cfg-otp-poll-interval" min="1" max="10" placeholder="e.g. 1" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
                             <label for="cfg-proxy">Rotating Proxies List (Optional - One per line)</label>
                             <div class="input-with-icon alignment-textarea">
                                 <i class="fa-solid fa-network-wired" style="top: 15px;"></i>

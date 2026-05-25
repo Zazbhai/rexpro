@@ -40,6 +40,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const passwordInput = document.getElementById("cfg-password");
     const concurrencyInput = document.getElementById("cfg-concurrency");
     const otpWaitInput = document.getElementById("cfg-otp-wait");
+    const loopDelayInput = document.getElementById("cfg-loop-delay");
+    const otpPollIntervalInput = document.getElementById("cfg-otp-poll-interval");
     const proxyInput = document.getElementById("cfg-proxy");
     const toggleApiKeyBtn = document.getElementById("toggle-api-key");
     const saveStatus = document.getElementById("save-status");
@@ -158,6 +160,8 @@ document.addEventListener("DOMContentLoaded", () => {
             passwordInput.value = config.PASSWORD || "";
             concurrencyInput.value = config.CONCURRENCY || 3;
             otpWaitInput.value = config.OTP_WAIT_TIME || 30;
+            loopDelayInput.value = config.LOOP_DELAY !== undefined ? config.LOOP_DELAY : 2;
+            otpPollIntervalInput.value = config.OTP_POLL_INTERVAL !== undefined ? config.OTP_POLL_INTERVAL : 1;
             proxyInput.value = config.PROXY || "";
         } catch (err) {
             appendLogLine(`[SYSTEM] Failed to load configurations: ${err.message}`, "error");
@@ -449,6 +453,8 @@ document.addEventListener("DOMContentLoaded", () => {
             PASSWORD: passwordInput.value.trim(),
             CONCURRENCY: parseInt(concurrencyInput.value) || 3,
             OTP_WAIT_TIME: parseInt(otpWaitInput.value) || 30,
+            LOOP_DELAY: isNaN(parseInt(loopDelayInput.value)) ? 2 : parseInt(loopDelayInput.value),
+            OTP_POLL_INTERVAL: isNaN(parseInt(otpPollIntervalInput.value)) ? 1 : parseInt(otpPollIntervalInput.value),
             PROXY: proxyInput.value.trim()
         };
 

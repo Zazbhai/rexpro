@@ -23,7 +23,9 @@ function loadConfig() {
         TARGET_BASE_URL: "https://rcapi.rexproearn.com/app/user",
         PASSWORD: "Zazbhai8709#",
         INVITE_CODE: "TDPARP",
-        CONCURRENCY: 3
+        CONCURRENCY: 3,
+        LOOP_DELAY: 2,
+        OTP_POLL_INTERVAL: 1
     };
 }
 

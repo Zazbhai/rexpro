@@ -274,9 +274,13 @@ def run_registration():
         )
         page = context.new_page()
         
-        # Block images and stylesheets/media files if possible to speed up page loading on VPS instances
+        # Block images and stylesheets/media files if possible, and filter third-party scripts to speed up page loading
         def route_handler(route):
-            if route.request.resource_type in ["image", "media", "font"]:
+            url = route.request.url
+            res_type = route.request.resource_type
+            if res_type in ["image", "media", "font"]:
+                route.abort()
+            elif res_type == "script" and not any(domain in url for domain in ["rexproearn.com", "localhost", "127.0.0.1"]):
                 route.abort()
             else:
                 route.continue_()
@@ -288,32 +292,20 @@ def run_registration():
             target_host = "https://rch5.rexproearn.com"
             registration_url = f"{target_host}/reg/?code={invite_code}"
             print(f"Navigating to: {registration_url}")
-            page.goto(registration_url)
-            
-            page.wait_for_load_state("networkidle")
+            page.goto(registration_url, wait_until="domcontentloaded")
 
-            # Step 2: Click the mobile number input field
+            # Step 2 & 3: Fill the mobile number input field directly (instant)
             mobile_selector = 'input[maxlength="10"][type="text"].uni-input-input'
-            print("Clicking mobile input field...")
+            print(f"Filling mobile number directly: {phone_number}")
             page.wait_for_selector(mobile_selector, timeout=10000)
-            page.click(mobile_selector)
+            page.fill(mobile_selector, phone_number)
 
-            # Step 3: Enter the mobile number
-            print(f"Entering mobile number: {phone_number}")
-            page.type(mobile_selector, phone_number, delay=100)
-
-            # Step 4: Press Tab twice and enter Password
-            print("Navigating to password field and typing password...")
-            page.keyboard.press("Tab")
-            page.keyboard.press("Tab")
-            time.sleep(0.5)
-            page.keyboard.type(password, delay=100)
-
-            # Step 5: Press Tab once more and confirm Password
-            print("Navigating to confirm password field...")
-            page.keyboard.press("Tab")
-            time.sleep(0.5)
-            page.keyboard.type(password, delay=100)
+            # Step 4 & 5: Target password fields directly and fill them instantly
+            print("Filling password fields directly...")
+            password_fields = page.locator('input[type="password"]')
+            password_fields.first.wait_for(timeout=5000)
+            password_fields.nth(0).fill(password)
+            password_fields.nth(1).fill(password)
 
             # Step 6: Click "Get OTP" and wait for the sendSmsCode network response
             otp_btn_selector = 'text="Get OTP"'
@@ -340,8 +332,9 @@ def run_registration():
 
             # Step 7: Retrieve OTP code with a max wait limit from configuration
             otp_wait_time = float(config.get("OTP_WAIT_TIME", 30.0))
-            print(f"Waiting for OTP code from SMS API (max {otp_wait_time} seconds wait)...")
-            sms_code = get_otp(request_id, timeout_seconds=otp_wait_time, poll_interval=2.0, config=config)
+            poll_interval = float(config.get("OTP_POLL_INTERVAL", 1.0))
+            print(f"Waiting for OTP code from SMS API (max {otp_wait_time} seconds wait, polling every {poll_interval}s)...")
+            sms_code = get_otp(request_id, timeout_seconds=otp_wait_time, poll_interval=poll_interval, config=config)
 
             if not sms_code:
                 print("Error: Timeout reached without receiving OTP. Cancelling number...")
@@ -351,12 +344,11 @@ def run_registration():
 
             print(f"OTP received successfully: {sms_code}")
 
-            # Step 8: Enter the retrieved OTP code into the browser input field
+            # Step 8: Fill the retrieved OTP code into the browser input field directly (instant)
             otp_input_selector = 'input[maxlength="6"][type="number"].uni-input-input'
-            print("Locating and typing OTP code into registration form...")
+            print("Filling OTP code into registration form directly...")
             page.wait_for_selector(otp_input_selector, timeout=10000)
-            page.click(otp_input_selector)
-            page.type(otp_input_selector, sms_code, delay=100)
+            page.fill(otp_input_selector, sms_code)
 
             # Step 9: Click the "Register" button and wait for the register request response
             print("Clicking 'Register' button...")
@@ -404,8 +396,8 @@ def run_registration():
                     err_msg = err_msg.replace("Target app error: ", "")
                 raise ValueError(f"Registration API failure: {err_msg}")
 
-            print("Form successfully submitted! Keeping browser open for 10 seconds...")
-            time.sleep(10)
+            print("Form successfully submitted! Closing browser...")
+            time.sleep(1)
 
         except Exception as e:
             print(f"Error during registration flow: {e}")
