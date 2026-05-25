@@ -338,9 +338,10 @@ def run_registration():
                     raise net_err
                 print(f"Warning: Network response check failed or timed out: {net_err}")
 
-            # Step 7: Retrieve OTP code with a max wait limit of 30 seconds
-            print("Waiting for OTP code from SMS API (max 30 seconds wait)...")
-            sms_code = get_otp(request_id, timeout_seconds=30.0, poll_interval=2.0, config=config)
+            # Step 7: Retrieve OTP code with a max wait limit from configuration
+            otp_wait_time = float(config.get("OTP_WAIT_TIME", 30.0))
+            print(f"Waiting for OTP code from SMS API (max {otp_wait_time} seconds wait)...")
+            sms_code = get_otp(request_id, timeout_seconds=otp_wait_time, poll_interval=2.0, config=config)
 
             if not sms_code:
                 print("Error: Timeout reached without receiving OTP. Cancelling number...")

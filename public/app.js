@@ -39,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const inviteInput = document.getElementById("cfg-invite");
     const passwordInput = document.getElementById("cfg-password");
     const concurrencyInput = document.getElementById("cfg-concurrency");
+    const otpWaitInput = document.getElementById("cfg-otp-wait");
     const proxyInput = document.getElementById("cfg-proxy");
     const toggleApiKeyBtn = document.getElementById("toggle-api-key");
     const saveStatus = document.getElementById("save-status");
@@ -119,6 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
             inviteInput.value = config.INVITE_CODE || "";
             passwordInput.value = config.PASSWORD || "";
             concurrencyInput.value = config.CONCURRENCY || 3;
+            otpWaitInput.value = config.OTP_WAIT_TIME || 30;
             proxyInput.value = config.PROXY || "";
         } catch (err) {
             appendLogLine(`[SYSTEM] Failed to load configurations: ${err.message}`, "error");
@@ -408,6 +410,7 @@ document.addEventListener("DOMContentLoaded", () => {
             INVITE_CODE: inviteInput.value.trim(),
             PASSWORD: passwordInput.value.trim(),
             CONCURRENCY: parseInt(concurrencyInput.value) || 3,
+            OTP_WAIT_TIME: parseInt(otpWaitInput.value) || 30,
             PROXY: proxyInput.value.trim()
         };
 
