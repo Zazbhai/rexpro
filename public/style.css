@@ -1,7 +1,4 @@
-/* ==========================================================================
-   REX AUTOMATION DASHBOARD - STYLE SHEET
-   ========================================================================== */
-
+/* Made by Zaz Yagami */
 :root {
     --bg-primary: #090d16;
     --bg-secondary: #0d1322;
@@ -15,18 +12,18 @@
     --text-secondary: #9ca3af;
     --text-dimmed: #6b7280;
     
-    --primary: #06b6d4;          /* Cyber Cyan */
+    --primary: #06b6d4;          
     --primary-glow: rgba(6, 182, 212, 0.15);
-    --secondary: #6366f1;        /* Indigo */
+    --secondary: #6366f1;        
     --secondary-glow: rgba(99, 102, 241, 0.15);
     
-    --success: #10b981;          /* Emerald Green */
+    --success: #10b981;          
     --success-glow: rgba(16, 185, 129, 0.15);
     
-    --danger: #ef4444;           /* Coral Red */
+    --danger: #ef4444;           
     --danger-glow: rgba(239, 68, 68, 0.15);
     
-    --warning: #f59e0b;          /* Neon Gold */
+    --warning: #f59e0b;          
     
     --font-sans: 'Outfit', sans-serif;
     --font-mono: 'Fira Code', monospace;
@@ -38,9 +35,6 @@
     --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ==========================================================================
-   RESET & GLOBAL LAYOUT
-   ========================================================================== */
 * {
     margin: 0;
     padding: 0;
@@ -57,7 +51,6 @@ body {
     padding-bottom: 40px;
 }
 
-/* Ambient Background Lights */
 .glow-bg {
     position: fixed;
     top: -150px;
@@ -84,9 +77,6 @@ body {
     padding-top: 30px;
 }
 
-/* ==========================================================================
-   HEADER
-   ========================================================================== */
 .app-header {
     display: flex;
     justify-content: space-between;
@@ -198,9 +188,6 @@ body {
     font-weight: 500;
 }
 
-/* ==========================================================================
-   CARDS GENERAL
-   ========================================================================== */
 .card {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
@@ -239,9 +226,6 @@ body {
     color: var(--primary);
 }
 
-/* ==========================================================================
-   GRID LAYOUTS
-   ========================================================================== */
 .dashboard-grid {
     display: grid;
     grid-template-columns: 4.5fr 7.5fr;
@@ -254,9 +238,6 @@ body {
     flex-direction: column;
 }
 
-/* ==========================================================================
-   BOT CONTROLS & STATE
-   ========================================================================== */
 .control-box {
     padding: 24px;
     display: flex;
@@ -375,9 +356,6 @@ body {
     gap: 15px;
 }
 
-/* ==========================================================================
-   BUTTONS
-   ========================================================================== */
 .btn {
     flex: 1;
     display: inline-flex;
@@ -466,9 +444,6 @@ body {
     font-size: 12px;
 }
 
-/* ==========================================================================
-   SESSION STATS
-   ========================================================================== */
 .stats-card {
     flex-grow: 1;
 }
@@ -533,9 +508,6 @@ body {
     font-weight: 500;
 }
 
-/* ==========================================================================
-   REAL-TIME CONSOLE / TERMINAL
-   ========================================================================== */
 .terminal-card {
     height: 100%;
     display: flex;
@@ -588,9 +560,6 @@ body {
     border-color: #d97706;
 }
 
-/* ==========================================================================
-   CONFIG CARD & FORMS
-   ========================================================================== */
 .config-card {
     margin-bottom: 25px;
 }
@@ -743,9 +712,6 @@ textarea:focus {
     color: var(--danger);
 }
 
-/* ==========================================================================
-   ACCOUNTS HISTORY TABLE
-   ========================================================================== */
 .history-card {
     margin-bottom: 0;
 }
@@ -808,7 +774,6 @@ textarea:focus {
     font-size: 14px;
 }
 
-/* Specific Cells styling */
 .cell-mono {
     font-family: var(--font-mono);
     color: #cbd5e1;
@@ -852,9 +817,6 @@ textarea:focus {
     color: var(--primary);
 }
 
-/* ==========================================================================
-   MODAL DIALOG
-   ========================================================================== */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -952,9 +914,6 @@ textarea:focus {
     }
 }
 
-/* ==========================================================================
-   LOGIN GATE OVERLAY
-   ========================================================================== */
 .login-overlay-container {
     position: fixed;
     top: 0;
@@ -1038,9 +997,6 @@ textarea:focus {
     margin-top: 5px;
 }
 
-/* ==========================================================================
-   RESPONSIVE SCALING
-   ========================================================================== */
 @media (max-width: 1024px) {
     .dashboard-grid {
         grid-template-columns: 1fr;

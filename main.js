@@ -1,10 +1,8 @@
+// Made by Zaz Yagami
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 
-// -------------------------------------------------------------
-// Configuration Helper
-// -------------------------------------------------------------
 function loadConfig() {
     try {
         const configPath = path.join(__dirname, "config.json");
@@ -29,14 +27,6 @@ function loadConfig() {
     };
 }
 
-// -------------------------------------------------------------
-// Virtual SMS API Helper Functions (Config-Aware)
-// -------------------------------------------------------------
-
-/**
- * Perform a GET request with shared base URL and API key to Virtual SMS API.
- * Returns raw text from the API or throws an Error on network/HTTP issues.
- */
 async function _httpGet(params, config) {
     const cfg = config || loadConfig();
     const merged = { api_key: cfg.API_KEY, ...params };
@@ -52,12 +42,10 @@ async function _httpGet(params, config) {
     }
 }
 
-/** Check account balance. */
 async function getBalance(config) {
     return _httpGet({ action: "getBalance" }, config);
 }
 
-/** Extract numeric balance from API response. */
 function parseBalance(text) {
     if (!text.startsWith("ACCESS_BALANCE:")) {
         return null;
@@ -69,7 +57,6 @@ function parseBalance(text) {
     }
 }
 
-/** Get pricing for the given country/operator. */
 async function getPrices(config, country, operator) {
     const cfg = config || loadConfig();
     return _httpGet({
@@ -79,7 +66,6 @@ async function getPrices(config, country, operator) {
     }, cfg);
 }
 
-/** Parse JSON-like price response into an object; returns {} on failure. */
 function parsePrices(text) {
     try {
         return JSON.parse(text);
@@ -88,10 +74,6 @@ function parsePrices(text) {
     }
 }
 
-/**
- * Fetch price data and return the price string for the given service,
- * or null if not found.
- */
 async function getPriceForService(config, service, country, operator) {
     const cfg = config || loadConfig();
     const raw = await getPrices(cfg, country || cfg.COUNTRY, operator || cfg.OPERATOR);
@@ -110,10 +92,6 @@ async function getPriceForService(config, service, country, operator) {
     return priceKeys.length > 0 ? priceKeys[0] : null;
 }
 
-/**
- * Request a virtual number for a service.
- * Returns { requestId, phoneNumber } or null on parse failure.
- */
 async function getNumber(config, service, country, operator) {
     const cfg = config || loadConfig();
     const raw = await _httpGet({
@@ -130,16 +108,12 @@ async function getNumber(config, service, country, operator) {
                 sharedState.addRequestId(result.requestId);
             }
         } catch (err) {
-            // shared_state may not exist in all contexts
+            
         }
     }
     return result;
 }
 
-/**
- * Extract { requestId, phoneNumber } from ACCESS_NUMBER response.
- * Strips leading '91' from the phone number if present.
- */
 function parseNumber(text) {
     if (!text.startsWith("ACCESS_NUMBER:")) {
         return null;
@@ -157,10 +131,6 @@ function parseNumber(text) {
     }
 }
 
-/**
- * Poll for OTP/status for up to timeoutSeconds.
- * Returns the OTP string if found; otherwise null.
- */
 async function getOtp(requestId, timeoutSeconds = 300, pollInterval = 2, config) {
     const cfg = config || loadConfig();
     const deadline = Date.now() + timeoutSeconds * 1000;
@@ -174,32 +144,25 @@ async function getOtp(requestId, timeoutSeconds = 300, pollInterval = 2, config)
         }
 
         if (Date.now() >= deadline) {
-            return otp; // may be null
+            return otp; 
         }
 
         await new Promise(resolve => setTimeout(resolve, pollInterval * 1000));
     }
 }
 
-/** Generic status update helper (e.g., 3=request new OTP, 8=cancel). */
 async function setStatus(status, requestId, config) {
     return _httpGet({ action: "setStatus", status: status, id: requestId }, config);
 }
 
-/** Shortcut: ask for another OTP (status=3). */
 async function requestNewOtp(requestId, config) {
     return setStatus(3, requestId, config);
 }
 
-/** Shortcut: cancel the number (status=8). */
 async function cancelNumber(requestId, config) {
     return setStatus(8, requestId, config);
 }
 
-/**
- * Interpret cancel response.
- * Returns 'accepted', 'already_cancelled', or raw text if unknown.
- */
 function parseCancelStatus(text) {
     if (text.startsWith("ACCESS_CANCEL")) {
         return "accepted";
@@ -210,23 +173,15 @@ function parseCancelStatus(text) {
     return text;
 }
 
-/**
- * Extract the first 4-8 digit OTP from the provided text.
- * Returns null if no OTP found.
- */
 function extractOtp(text) {
     const matches = text.match(/\b\d{4,8}\b/g);
     if (!matches) {
         return null;
     }
-    // Prefer the last match (often the actual OTP)
+    
     return matches[matches.length - 1];
 }
 
-/**
- * Parse getStatus response.
- * Returns { status, otp } where otp is string or null.
- */
 function parseOtpResponse(text) {
     if (text.startsWith("STATUS_OK:")) {
         const otp = extractOtp(text);
@@ -241,10 +196,6 @@ function parseOtpResponse(text) {
     return { status: "unknown", otp: extractOtp(text) };
 }
 
-/**
- * Ask for a fresh OTP (status=3) and poll until a new OTP different from
- * previousOtp is received, or timeout is reached. Returns the new OTP or null.
- */
 async function requestNewOtpUntilNew(
     requestId,
     previousOtp = null,
@@ -273,10 +224,6 @@ async function requestNewOtpUntilNew(
         lastOtp = otp || lastOtp;
     }
 }
-
-// -------------------------------------------------------------
-// Existing Target Application Registration Functions
-// -------------------------------------------------------------
 
 async function sendOtp(mobileNo, config, log = console.log) {
     const cfg = config || loadConfig();
@@ -347,14 +294,6 @@ async function registerUser(mobileNo, password, smsCode, inviteCode, config, log
     }
 }
 
-// -------------------------------------------------------------
-// Core Automation Lifecycle Execution
-// -------------------------------------------------------------
-
-/**
- * Persists details of numbers that failed during target app registration
- * AFTER successfully receiving the OTP from the SMS provider.
- */
 function saveFailedRegistration(phoneNumber, password, smsCode, errorMessage, log = console.log) {
     const filePath = path.join(__dirname, "failed_registrations.json");
     let failures = [];
@@ -382,10 +321,6 @@ function saveFailedRegistration(phoneNumber, password, smsCode, errorMessage, lo
     }
 }
 
-/**
- * Runs a single cycle of number retrieval, OTP polling, and registration.
- * Appends the successfully created account credentials to accounts.json.
- */
 async function runSingleCycle(config, log = console.log) {
     const cfg = config || loadConfig();
     let requestId = null;
@@ -408,7 +343,6 @@ async function runSingleCycle(config, log = console.log) {
         phoneNumber = numResult.phoneNumber;
         log(`Successfully obtained number: ${phoneNumber} (Request ID: ${requestId})`);
 
-        // STEP 1: SEND OTP FROM APP
         log(`Sending OTP from target app to ${phoneNumber}...`);
         const otpSent = await sendOtp(phoneNumber, cfg, log);
 
@@ -416,7 +350,6 @@ async function runSingleCycle(config, log = console.log) {
             throw new Error("Failed to trigger OTP send in the application.");
         }
 
-        // STEP 2: POLL FOR OTP
         log("Polling for OTP (30 seconds timeout)...");
         smsCode = await getOtp(requestId, 30, 2, cfg);
 
@@ -425,7 +358,6 @@ async function runSingleCycle(config, log = console.log) {
         }
         log(`Successfully retrieved OTP: ${smsCode}`);
 
-        // STEP 3: REGISTER USER
         log("Registering user with target application...");
         const token = await registerUser(
             phoneNumber,
@@ -436,7 +368,6 @@ async function runSingleCycle(config, log = console.log) {
             log
         );
 
-        // Save successfully registered account
         const accountRecord = {
             phoneNumber,
             password: cfg.PASSWORD,
@@ -487,9 +418,6 @@ async function runSingleCycle(config, log = console.log) {
     }
 }
 
-// -------------------------------------------------------------
-// Direct Execution CLI
-// -------------------------------------------------------------
 async function main() {
     console.log("--- Starting registration cycle via CLI ---");
     const result = await runSingleCycle();
@@ -504,7 +432,6 @@ if (require.main === module) {
     main();
 }
 
-// Export functions for Server/UI integration
 module.exports = {
     loadConfig,
     getBalance,

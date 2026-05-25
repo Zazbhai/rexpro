@@ -1,9 +1,6 @@
-/* ==========================================================================
-   REX AUTOMATION DASHBOARD - DYNAMIC SCRIPT
-   ========================================================================= */
-
+// Made by Zaz Yagami
 document.addEventListener("DOMContentLoaded", () => {
-    // API Endpoints
+    
     const STATUS_API = "/api/status";
     const CONFIG_API = "/api/config";
     const ACCOUNTS_API = "/api/accounts";
@@ -12,7 +9,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const LOGS_STREAM_API = "/api/logs/stream";
     const FAILED_ACCOUNTS_API = "/api/failed-accounts";
 
-    // DOM Elements
     const startBtn = document.getElementById("start-btn");
     const stopBtn = document.getElementById("stop-btn");
     const modeRadios = document.getElementsByName("bot-mode");
@@ -23,12 +19,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const clearLogsBtn = document.getElementById("clear-logs-btn");
     const logTerminal = document.getElementById("log-terminal");
 
-    // Stats Elements
     const statSuccess = document.getElementById("stat-success");
     const statErrors = document.getElementById("stat-errors");
     const statTotal = document.getElementById("stat-total");
 
-    // Config Form Elements
     const configForm = document.getElementById("config-form");
     const apiKeyInput = document.getElementById("cfg-api-key");
     const smsUrlInput = document.getElementById("cfg-sms-url");
@@ -46,32 +40,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const toggleApiKeyBtn = document.getElementById("toggle-api-key");
     const saveStatus = document.getElementById("save-status");
 
-    // Accounts History Elements
     const tableBody = document.getElementById("accounts-table-body");
     const refreshBtn = document.getElementById("refresh-btn");
     const exportBtn = document.getElementById("export-btn");
     const failedTableBody = document.getElementById("failed-table-body");
     const failedRefreshBtn = document.getElementById("failed-refresh-btn");
 
-    // Modal Elements
     const errorModal = document.getElementById("error-modal");
     const closeModalBtn = document.getElementById("close-modal-btn");
     const modalTitle = document.getElementById("modal-title");
     const modalMessage = document.getElementById("modal-message");
 
-    // Login Overlay Elements
     const loginOverlay = document.getElementById("login-overlay");
     const loginForm = document.getElementById("login-form");
     const loginPasswordInput = document.getElementById("login-password");
     const loginError = document.getElementById("login-error");
 
-    // Logging & SSE State
     let eventSource = null;
     let pollIntervalId = null;
-
-    // -------------------------------------------------------------
-    // Core Functions
-    // -------------------------------------------------------------
 
     function getAuthHeaders() {
         const token = localStorage.getItem("rex_auth_token") || "";
@@ -104,7 +90,6 @@ document.addEventListener("DOMContentLoaded", () => {
         loginOverlay.classList.remove("active");
     }
 
-    // Helper to safely parse API responses
     async function safeParse(res) {
         if (!res.ok) {
             let errorMsg = `Server returned status ${res.status}`;
@@ -114,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 errorMsg = errJson.error || errorMsg;
             } else {
                 const errText = await res.text();
-                // Strip HTML tags for clean error representation
+                
                 errorMsg = errText.replace(/<[^>]*>/g, '').trim() || errorMsg;
                 if (errorMsg.length > 100) errorMsg = errorMsg.substring(0, 100) + "...";
             }
@@ -123,14 +108,12 @@ document.addEventListener("DOMContentLoaded", () => {
         return await res.json();
     }
 
-    // Helper to format timestamps
     function formatTime(isoString) {
         if (!isoString) return "N/A";
         const date = new Date(isoString);
         return date.toLocaleString();
     }
 
-    // Server Connectivity Status
     function setOnline(isOnline) {
         if (isOnline) {
             serverStatusPill.classList.remove("offline");
@@ -144,7 +127,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Load System Configuration
     async function loadConfig() {
         try {
             const res = await apiFetch(CONFIG_API);
@@ -168,7 +150,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Load Registered Accounts Database Table
     async function loadAccounts() {
         try {
             const res = await apiFetch(ACCOUNTS_API);
@@ -180,7 +161,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Load Failed Registration Accounts Table
     async function loadFailedAccounts() {
         try {
             const res = await apiFetch(FAILED_ACCOUNTS_API);
@@ -192,7 +172,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Render Failed Accounts List into table
     function renderFailedAccountsTable(failures) {
         if (!failures || failures.length === 0) {
             failedTableBody.innerHTML = `
@@ -227,10 +206,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     </td>
                 </tr>
             `;
-        }).reverse().join(""); // Show newest first
+        }).reverse().join(""); 
     }
 
-    // Render Accounts List into table
     function renderAccountsTable(accounts) {
         if (!accounts || accounts.length === 0) {
             tableBody.innerHTML = `
@@ -268,10 +246,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     </td>
                 </tr>
             `;
-        }).reverse().join(""); // Show newest first
+        }).reverse().join(""); 
     }
 
-    // Update Status, balance, and running stats
     async function updateStatus() {
         try {
             const res = await apiFetch(STATUS_API);
@@ -279,19 +256,16 @@ document.addEventListener("DOMContentLoaded", () => {
             
             setOnline(true);
             
-            // Balance check
             if (status.balance !== null) {
                 balanceValue.textContent = `₹${status.balance}`;
             } else {
                 balanceValue.textContent = status.balanceRaw || "Error";
             }
 
-            // Stats counts
             statSuccess.textContent = status.successCount;
             statErrors.textContent = status.errorCount;
             statTotal.textContent = status.totalCreated;
 
-            // Running Engine States UI
             if (status.isRunning) {
                 botStateBadge.className = "state-badge running";
                 botStateText.textContent = "Running";
@@ -310,7 +284,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Connect Server-Sent Events for real-time logs
     function connectLogsStream() {
         if (eventSource) {
             eventSource.close();
@@ -323,20 +296,18 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const log = JSON.parse(event.data);
                 
-                // Determine log line class based on contents
                 let type = "info";
                 const msg = log.message.toLowerCase();
                 
                 if (msg.includes("success") || msg.includes("completed successfully")) {
                     type = "success";
-                    // Dynamic table reload on generation success
+                    
                     loadAccounts();
                 } else if (msg.includes("error") || msg.includes("failed") || msg.includes("failure")) {
                     type = "error";
-                    // Reload failures table
+                    
                     loadFailedAccounts();
                     
-                    // Trigger popup if IP is flagged/blocked
                     if (msg.includes("exceeds the limit") || msg.includes("limit exceeded")) {
                         showModal(
                             "IP Address Flagged", 
@@ -362,13 +333,11 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    // Append log string to scrolling terminal window
     function appendLogLine(text, type = "info") {
         const line = document.createElement("div");
         line.className = `log-line ${type}`;
         line.textContent = text;
         
-        // Auto-scroll logic if user hasn't scrolled up
         const isScrolledToBottom = logTerminal.scrollHeight - logTerminal.clientHeight <= logTerminal.scrollTop + 30;
         
         logTerminal.appendChild(line);
@@ -378,11 +347,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // -------------------------------------------------------------
-    // Event Listeners & Button Actions
-    // -------------------------------------------------------------
-
-    // Start Bot Action
     startBtn.addEventListener("click", async () => {
         let selectedMode = "once";
         for (let radio of modeRadios) {
@@ -407,7 +371,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Stop Bot Action
     stopBtn.addEventListener("click", async () => {
         try {
             const res = await apiFetch(STOP_API, { method: "POST" });
@@ -420,12 +383,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Clear logs screen
     clearLogsBtn.addEventListener("click", () => {
         logTerminal.innerHTML = `<div class="log-line system">[SYSTEM] Console screen cleared by user.</div>`;
     });
 
-    // Toggle API Key password masking
     toggleApiKeyBtn.addEventListener("click", () => {
         if (apiKeyInput.type === "password") {
             apiKeyInput.type = "text";
@@ -436,7 +397,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Save Configurations Form Submit
     configForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         saveStatus.className = "save-status";
@@ -473,7 +433,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 saveStatus.textContent = "";
             }, 3000);
             
-            // Refresh stats to fetch fresh balance with new configuration
             updateStatus();
         } catch (err) {
             saveStatus.className = "save-status error";
@@ -481,7 +440,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Manual Refresh Table List
     refreshBtn.addEventListener("click", () => {
         loadAccounts();
         loadFailedAccounts();
@@ -489,13 +447,11 @@ document.addEventListener("DOMContentLoaded", () => {
         appendLogLine("[SYSTEM] Database list updated manually.", "system");
     });
 
-    // Manual Refresh Failed List
     failedRefreshBtn.addEventListener("click", () => {
         loadFailedAccounts();
         appendLogLine("[SYSTEM] Failed registrations database refreshed manually.", "system");
     });
 
-    // Export Accounts Database History as JSON file
     exportBtn.addEventListener("click", async () => {
         try {
             const res = await apiFetch(ACCOUNTS_API);
@@ -519,7 +475,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Initialize App
     const savedToken = localStorage.getItem("rex_auth_token");
     if (!savedToken) {
         showLoginScreen();
@@ -539,7 +494,6 @@ document.addEventListener("DOMContentLoaded", () => {
         pollIntervalId = setInterval(updateStatus, 3000);
     }
 
-    // Login Form Submit
     loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         loginError.style.display = "none";
@@ -569,9 +523,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // -------------------------------------------------------------
-    // Modal Interaction Handlers
-    // -------------------------------------------------------------
     function showModal(title, message) {
         modalTitle.textContent = title;
         modalMessage.textContent = message;
@@ -589,10 +540,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// Global copy helper function for table actions
 function copyText(text, label) {
     navigator.clipboard.writeText(text).then(() => {
-        // Show status log in console
+        
         const date = new Date().toLocaleTimeString();
         const logTerminal = document.getElementById("log-terminal");
         if (logTerminal) {

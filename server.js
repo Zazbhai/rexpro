@@ -1,3 +1,4 @@
+// Made by Zaz Yagami
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -7,7 +8,7 @@ require("dotenv").config();
 const botModule = require("./main");
 
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "Zazbhai8709#";
-// Simple static token derived from password hash
+
 const AUTH_TOKEN = crypto.createHash("sha256").update(DASHBOARD_PASSWORD).digest("hex");
 
 function authenticate(req, res, next) {
@@ -33,17 +34,13 @@ const PORT = process.env.PORT || 3004;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// -------------------------------------------------------------
-// Global Bot State & In-Memory Logs
-// -------------------------------------------------------------
 let isRunning = false;
-let botMode = "once"; // "once" or "loop"
+let botMode = "once"; 
 let successCount = 0;
 let errorCount = 0;
 const logBuffer = [];
 let sseClients = [];
 
-// Broadcast logs to terminal and SSE clients
 function broadcastLog(text) {
     const logEntry = {
         timestamp: new Date().toLocaleTimeString(),
@@ -60,7 +57,7 @@ function broadcastLog(text) {
         try {
             client.write(`data: ${data}\n\n`);
         } catch (err) {
-            // Client socket may have been destroyed
+            
         }
     });
 }
@@ -81,9 +78,6 @@ function getPythonExecutable() {
     return isWin ? "python" : "python3";
 }
 
-// -------------------------------------------------------------
-// Playwright Python Script Runner
-// -------------------------------------------------------------
 function runPlaywrightScript(workerId) {
     return new Promise((resolve, reject) => {
         const pythonExe = getPythonExecutable();
@@ -144,9 +138,6 @@ function runPlaywrightScript(workerId) {
     });
 }
 
-// -------------------------------------------------------------
-// Background Registration Workers (Multitasking)
-// -------------------------------------------------------------
 let activeWorkersCount = 0;
 
 async function runWorker(workerId) {
@@ -190,11 +181,6 @@ async function runWorker(workerId) {
     }
 }
 
-// -------------------------------------------------------------
-// API Endpoints
-// -------------------------------------------------------------
-
-// login gate
 app.post("/api/login", (req, res) => {
     const { password } = req.body;
     if (!password) {
@@ -208,14 +194,12 @@ app.post("/api/login", (req, res) => {
     res.status(401).json({ error: "Incorrect password. Access denied." });
 });
 
-// Stream live logs in real-time using Server-Sent Events (SSE)
 app.get("/api/logs/stream", authenticate, (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
 
-    // Send historical logs in buffer
     logBuffer.forEach(log => {
         res.write(`data: ${JSON.stringify(log)}\n\n`);
     });
@@ -227,7 +211,6 @@ app.get("/api/logs/stream", authenticate, (req, res) => {
     });
 });
 
-// Fetch current status and statistics
 app.get("/api/status", authenticate, async (req, res) => {
     let balance = null;
     let balanceRaw = "N/A";
@@ -248,7 +231,7 @@ app.get("/api/status", authenticate, async (req, res) => {
             accountsCount = accounts.length;
         }
     } catch (err) {
-        // Ignore files issues
+        
     }
 
     res.json({
@@ -262,7 +245,6 @@ app.get("/api/status", authenticate, async (req, res) => {
     });
 });
 
-// Start the bot execution
 app.post("/api/bot/start", authenticate, (req, res) => {
     if (isRunning) {
         return res.status(400).json({ error: "Bot is already running." });
@@ -272,13 +254,11 @@ app.post("/api/bot/start", authenticate, (req, res) => {
     botMode = mode === "loop" ? "loop" : "once";
     isRunning = true;
 
-    // Load active config to read concurrency count
     const config = botModule.loadConfig();
     const concurrency = Math.max(1, parseInt(config.CONCURRENCY) || 1);
 
     broadcastLog(`Automation started by user in '${botMode}' mode with ${concurrency} parallel workers.`);
 
-    // Spawn threads/workers in parallel
     for (let i = 1; i <= concurrency; i++) {
         runWorker(i);
     }
@@ -286,7 +266,6 @@ app.post("/api/bot/start", authenticate, (req, res) => {
     res.json({ success: true, mode: botMode, concurrency });
 });
 
-// Stop the bot execution
 app.post("/api/bot/stop", authenticate, (req, res) => {
     if (!isRunning) {
         return res.status(400).json({ error: "Bot is not running." });
@@ -299,7 +278,7 @@ app.post("/api/bot/stop", authenticate, (req, res) => {
         try {
             child.kill();
         } catch (err) {
-            // Ignore
+            
         }
     });
     activeChildProcesses = [];
@@ -307,17 +286,14 @@ app.post("/api/bot/stop", authenticate, (req, res) => {
     res.json({ success: true });
 });
 
-// Get current configuration
 app.get("/api/config", authenticate, (req, res) => {
     res.json(botModule.loadConfig());
 });
 
-// Save new configuration
 app.post("/api/config", authenticate, (req, res) => {
     try {
         const newConfig = req.body;
 
-        // Basic validations
         if (!newConfig.SMS_BASE_URL || !newConfig.API_KEY || !newConfig.TARGET_BASE_URL) {
             return res.status(400).json({ error: "URLs and API Key are required." });
         }
@@ -332,7 +308,6 @@ app.post("/api/config", authenticate, (req, res) => {
     }
 });
 
-// Get registered accounts
 app.get("/api/accounts", authenticate, (req, res) => {
     try {
         const accountsPath = path.join(__dirname, "accounts.json");
@@ -346,7 +321,6 @@ app.get("/api/accounts", authenticate, (req, res) => {
     }
 });
 
-// Get failed registration accounts (OTP received but registration failed)
 app.get("/api/failed-accounts", authenticate, (req, res) => {
     try {
         const filePath = path.join(__dirname, "failed_registrations.json");
@@ -360,10 +334,40 @@ app.get("/api/failed-accounts", authenticate, (req, res) => {
     }
 });
 
-// Start the server
-app.listen(PORT, () => {
+const os = require("os");
+const axios = require("axios");
+
+function getLocalIpAddresses() {
+    const interfaces = os.networkInterfaces();
+    const ips = [];
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === "IPv4" && !iface.internal) {
+                ips.push(iface.address);
+            }
+        }
+    }
+    return ips;
+}
+
+async function getPublicIpAddress() {
+    try {
+        const response = await axios.get("https://api.ipify.org?format=json", { timeout: 5000 });
+        return response.data.ip;
+    } catch (err) {
+        return "Unknown";
+    }
+}
+
+app.listen(PORT, async () => {
     console.log(`=========================================`);
     console.log(`  Automation Server listening on port ${PORT}`);
     console.log(`  Open dashboard: http://localhost:${PORT}`);
+    const localIps = getLocalIpAddresses();
+    localIps.forEach(ip => {
+        console.log(`  Local Network Link: http://${ip}:${PORT}`);
+    });
+    const publicIp = await getPublicIpAddress();
+    console.log(`  Public Link (WAN): http://${publicIp}:${PORT}`);
     console.log(`=========================================`);
 });

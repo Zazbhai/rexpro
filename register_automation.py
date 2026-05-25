@@ -1,3 +1,4 @@
+# Made by Zaz Yagami
 import os
 import sys
 import json
@@ -8,9 +9,6 @@ import urllib.parse
 from typing import Any, Dict, Optional, Tuple
 from playwright.sync_api import sync_playwright
 
-# -------------------------------------------------------------
-# Configuration Loader
-# -------------------------------------------------------------
 def load_config() -> Dict[str, Any]:
     config_path = os.path.join(os.path.dirname(__file__), "config.json")
     if os.path.exists(config_path):
@@ -19,7 +17,7 @@ def load_config() -> Dict[str, Any]:
                 return json.load(f)
         except Exception as e:
             print(f"Error loading config.json: {e}")
-    # Default fallbacks
+    
     return {
         "SMS_BASE_URL": "https://zotp.in/stubs/handler_api.php",
         "API_KEY": "2ce12168a4f72374207d61fc634ba23c79cf",
@@ -31,9 +29,6 @@ def load_config() -> Dict[str, Any]:
         "INVITE_CODE": "TDPARP"
     }
 
-# -------------------------------------------------------------
-# SMS Service API Helpers
-# -------------------------------------------------------------
 def _http_get(params: Dict[str, Any], config: Dict[str, Any]) -> str:
     merged = {"api_key": config["API_KEY"], **params}
     url = f"{config['SMS_BASE_URL']}?{urllib.parse.urlencode(merged)}"
@@ -106,9 +101,6 @@ def extract_otp(text: str) -> Optional[str]:
         return None
     return matches[-1]
 
-# -------------------------------------------------------------
-# File Database I/O Helpers
-# -------------------------------------------------------------
 def save_successful_account(phone_number: str, password: str, sms_code: str, jwt_token: str = "PLAYWRIGHT_SUCCESS"):
     file_path = os.path.join(os.path.dirname(__file__), "accounts.json")
     accounts = []
@@ -159,9 +151,6 @@ def save_failed_registration(phone_number: str, password: str, sms_code: str, er
     except Exception as e:
         print(f"Error writing to failed_registrations.json: {e}")
 
-# -------------------------------------------------------------
-# Main Registration Flow (Playwright)
-# -------------------------------------------------------------
 def run_registration():
     config = load_config()
     invite_code = config.get("INVITE_CODE", "TDPARP")
@@ -180,13 +169,12 @@ def run_registration():
     request_id, phone_number = number_info
     print(f"Obtained Number: {phone_number} (Request ID: {request_id})")
 
-    # 2. Setup proxy selection
     proxy_settings = None
     proxy_val = config.get("PROXY", "").strip()
     selected_proxy = ""
     
     if proxy_val:
-        # Support list of proxies separated by newlines
+        
         proxies = [p.strip() for p in proxy_val.split("\n") if p.strip()]
         if proxies:
             selected_proxy = proxies[0]
@@ -195,10 +183,9 @@ def run_registration():
             username = None
             password = None
             
-            # Check for authentication credentials in the proxy URL
             if "@" in selected_proxy:
                 try:
-                    # e.g., http://user:pass@ip:port
+                    
                     schema_part = ""
                     if "://" in selected_proxy:
                         schema_part, rest = selected_proxy.split("://", 1)
@@ -208,7 +195,6 @@ def run_registration():
                     auth_part, host_part = rest.split("@", 1)
                     user_part, pass_part = auth_part.split(":", 1)
                     
-                    # Reconstruct clean server url without credentials
                     server_url = f"{schema_part}://{host_part}" if schema_part else host_part
                     username = user_part
                     password = pass_part
@@ -220,20 +206,17 @@ def run_registration():
                 proxy_settings["username"] = username
                 proxy_settings["password"] = password
 
-    # Helper function to rotate proxies in config.json
     def rotate_proxies():
         if not proxy_val:
             return
         try:
             proxies = [p.strip() for p in proxy_val.split("\n") if p.strip()]
             if len(proxies) <= 1:
-                return # Nothing to rotate
+                return 
             
-            # Move first proxy to the end of the list
             rotated = proxies[1:] + [proxies[0]]
             new_proxy_str = "\n".join(rotated)
             
-            # Update configuration
             config_path = os.path.join(os.path.dirname(__file__), "config.json")
             if os.path.exists(config_path):
                 with open(config_path, "r", encoding="utf-8") as f:
@@ -249,32 +232,27 @@ def run_registration():
 
     with sync_playwright() as p:
         browser_args = {
-            # VPS Optimized parameters
+            
             "args": [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-accelerated-2d-canvas",
                 "--disable-gpu",
-                "--no-first-run",
-                "--no-zygote",
-                "--single-process"
+                "--no-first-run"
             ]
         }
         if proxy_settings:
             browser_args["proxy"] = proxy_settings
             
-        # Run headless=True by default for headless VPS environments
-        browser = p.chromium.launch(headless=True, **browser_args)
+        browser = p.chromium.launch(headless=False, **browser_args)
         
-        # Configure context with standard screen sizes and block heavy resources (like images/fonts) to save VPS bandwidth
         context = browser.new_context(
             viewport={"width": 1280, "height": 800},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         )
         page = context.new_page()
         
-        # Block images and stylesheets/media files if possible, and filter third-party scripts to speed up page loading
         def route_handler(route):
             url = route.request.url
             res_type = route.request.resource_type
@@ -287,27 +265,23 @@ def run_registration():
         page.route("**/*", route_handler)
 
         try:
-            # Step 1: Open the registration page
-            # Derive registration host domain from target api base url
+            
             target_host = "https://rch5.rexproearn.com"
             registration_url = f"{target_host}/reg/?code={invite_code}"
             print(f"Navigating to: {registration_url}")
             page.goto(registration_url, wait_until="domcontentloaded")
 
-            # Step 2 & 3: Fill the mobile number input field directly (instant)
             mobile_selector = 'input[maxlength="10"][type="text"].uni-input-input'
             print(f"Filling mobile number directly: {phone_number}")
             page.wait_for_selector(mobile_selector, timeout=10000)
             page.fill(mobile_selector, phone_number)
 
-            # Step 4 & 5: Target password fields directly and fill them instantly
             print("Filling password fields directly...")
             password_fields = page.locator('input[type="password"]')
             password_fields.first.wait_for(timeout=5000)
             password_fields.nth(0).fill(password)
             password_fields.nth(1).fill(password)
 
-            # Step 6: Click "Get OTP" and wait for the sendSmsCode network response
             otp_btn_selector = 'text="Get OTP"'
             print("Clicking 'Get OTP' button...")
             try:
@@ -330,7 +304,6 @@ def run_registration():
                     raise net_err
                 print(f"Warning: Network response check failed or timed out: {net_err}")
 
-            # Step 7: Retrieve OTP code with a max wait limit from configuration
             otp_wait_time = float(config.get("OTP_WAIT_TIME", 30.0))
             poll_interval = float(config.get("OTP_POLL_INTERVAL", 1.0))
             print(f"Waiting for OTP code from SMS API (max {otp_wait_time} seconds wait, polling every {poll_interval}s)...")
@@ -344,17 +317,15 @@ def run_registration():
 
             print(f"OTP received successfully: {sms_code}")
 
-            # Step 8: Fill the retrieved OTP code into the browser input field directly (instant)
             otp_input_selector = 'input[maxlength="6"][type="number"].uni-input-input'
             print("Filling OTP code into registration form directly...")
             page.wait_for_selector(otp_input_selector, timeout=10000)
             page.fill(otp_input_selector, sms_code)
 
-            # Step 9: Click the "Register" button and wait for the register request response
             print("Clicking 'Register' button...")
             
             try:
-                # Find the best visible selector sequentially (prevents CSS parsing errors)
+                
                 register_selector = 'uni-button:has-text("Register")'
                 for selector in [
                     'uni-button:has-text("Register")',
@@ -385,7 +356,7 @@ def run_registration():
                 
                 if msg == "success" or code == 200:
                     print("Registration successfully validated on target server.")
-                    # Save successfully registered account database record with token
+                    
                     save_successful_account(phone_number, password, sms_code, jwt_token or "PLAYWRIGHT_SUCCESS")
                 else:
                     err_msg = msg or f"Registration failed with code {code}"
@@ -409,7 +380,6 @@ def run_registration():
             print("Cancelling number due to execution failure...")
             cancel_number(request_id, config)
             
-            # Check if proxy rotation is required
             err_str = str(e).lower()
             if "exceeds the limit" in err_str or "sending limit exceeded" in err_str:
                 print("[SYSTEM] SMS sending limit exceeded detected. Rotating proxy list...")

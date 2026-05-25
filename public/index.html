@@ -1,21 +1,21 @@
+<!-- Made by Zaz Yagami -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rex Automation Dashboard</title>
-    <!-- Google Fonts -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <!-- FontAwesome for Icons -->
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="glow-bg"></div>
 
-    <!-- Login Gate Overlay -->
     <div id="login-overlay" class="login-overlay-container">
         <div class="login-card">
             <div class="login-header">
@@ -40,7 +40,7 @@
     </div>
     
     <div class="app-container">
-        <!-- HEADER -->
+        
         <header class="app-header">
             <div class="logo-area">
                 <i class="fa-solid fa-robot logo-icon"></i>
@@ -62,13 +62,10 @@
             </div>
         </header>
 
-        <!-- MAIN DASHBOARD LAYOUT -->
         <main class="dashboard-grid">
             
-            <!-- LEFT PANEL: CONTROLS & STATS -->
             <div class="grid-col left-col">
                 
-                <!-- CARD 1: CONTROLS -->
                 <section class="card control-card">
                     <div class="card-header">
                         <h2><i class="fa-solid fa-gamepad header-icon"></i>Bot Engine Controls</h2>
@@ -110,7 +107,6 @@
                     </div>
                 </section>
 
-                <!-- CARD 2: RUN STATS -->
                 <section class="card stats-card">
                     <div class="card-header">
                         <h2><i class="fa-solid fa-chart-simple header-icon"></i>Current Session Stats</h2>
@@ -141,7 +137,6 @@
                 </section>
             </div>
 
-            <!-- RIGHT PANEL: REAL-TIME CONSOLE -->
             <div class="grid-col right-col">
                 <section class="card terminal-card">
                     <div class="card-header">
@@ -158,7 +153,6 @@
 
         </main>
 
-        <!-- CONFIGURATION CARD (EXPANDABLE/WIDE) -->
         <section class="card config-card">
             <div class="card-header">
                 <h2><i class="fa-solid fa-sliders header-icon"></i>System Configuration Settings</h2>
@@ -167,7 +161,7 @@
             
             <form id="config-form" class="config-form">
                 <div class="form-grid">
-                    <!-- Column 1: API Settings -->
+                    
                     <div class="form-group-wrap">
                         <h3>API Configuration & Credentials</h3>
                         <div class="form-group">
@@ -238,7 +232,6 @@
                         </div>
                     </div>
 
-                    <!-- Column 2: Parameters -->
                     <div class="form-group-wrap">
                         <h3>SMS Query Parameters</h3>
                         <div class="form-row-three">
@@ -284,7 +277,6 @@
             </form>
         </section>
 
-        <!-- ACCOUNTS LOG / HISTORY -->
         <section class="card history-card">
             <div class="card-header">
                 <h2><i class="fa-solid fa-list-check header-icon"></i>Created Accounts Database History</h2>
@@ -323,7 +315,6 @@
             </div>
         </section>
 
-        <!-- FAILED REGISTRATIONS LOG -->
         <section class="card history-card failed-history-card" style="margin-top: 25px;">
             <div class="card-header">
                 <h2><i class="fa-solid fa-triangle-exclamation header-icon" style="color: var(--danger);"></i>Failed Registrations (OTP Received)</h2>
@@ -360,7 +351,6 @@
         </section>
     </div>
 
-    <!-- Error Alert Modal -->
     <div id="error-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
@@ -376,7 +366,6 @@
         </div>
     </div>
 
-    <!-- Script connection -->
     <script src="app.js"></script>
 </body>
 </html>
