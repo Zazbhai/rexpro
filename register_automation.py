@@ -359,12 +359,29 @@ def run_registration():
             page.type(otp_input_selector, sms_code, delay=100)
 
             # Step 9: Click the "Register" button and wait for the register request response
-            register_btn_selector = 'uni-button:has-text("Register"), button:has-text("Register"), text="Register", .uni-btn'
             print("Clicking 'Register' button...")
             
             try:
+                # Find the best visible selector sequentially (prevents CSS parsing errors)
+                register_selector = 'uni-button:has-text("Register")'
+                for selector in [
+                    'uni-button:has-text("Register")',
+                    'button:has-text("Register")',
+                    'text="Register"',
+                    'uni-button'
+                ]:
+                    try:
+                        if page.locator(selector).first.is_visible():
+                            register_selector = selector
+                            break
+                    except Exception:
+                        continue
+                
+                print(f"Using register selector: {register_selector}")
+                page.wait_for_selector(register_selector, timeout=10000)
+                
                 with page.expect_response("**/register", timeout=15000) as response_info:
-                    page.click(register_btn_selector)
+                    page.click(register_selector)
                 response = response_info.value
                 response_text = response.text()
                 print(f"Target App Register Response: {response_text}")
