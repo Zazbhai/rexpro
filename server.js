@@ -2,7 +2,28 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
+const crypto = require("crypto");
+require("dotenv").config();
 const botModule = require("./main");
+
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "Zazbhai8709#";
+// Simple static token derived from password hash
+const AUTH_TOKEN = crypto.createHash("sha256").update(DASHBOARD_PASSWORD).digest("hex");
+
+function authenticate(req, res, next) {
+    let token = req.query.token;
+    if (!token) {
+        const authHeader = req.headers["authorization"];
+        if (authHeader) {
+            token = authHeader.split(" ")[1];
+        }
+    }
+    
+    if (token !== AUTH_TOKEN) {
+        return res.status(401).json({ error: "Access Denied: Invalid or expired session token." });
+    }
+    next();
+}
 
 let activeChildProcesses = [];
 
@@ -171,8 +192,22 @@ async function runWorker(workerId) {
 // API Endpoints
 // -------------------------------------------------------------
 
+// login gate
+app.post("/api/login", (req, res) => {
+    const { password } = req.body;
+    if (!password) {
+        return res.status(400).json({ error: "Password is required." });
+    }
+    
+    if (password === DASHBOARD_PASSWORD) {
+        return res.json({ token: AUTH_TOKEN });
+    }
+    
+    res.status(401).json({ error: "Incorrect password. Access denied." });
+});
+
 // Stream live logs in real-time using Server-Sent Events (SSE)
-app.get("/api/logs/stream", (req, res) => {
+app.get("/api/logs/stream", authenticate, (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -191,7 +226,7 @@ app.get("/api/logs/stream", (req, res) => {
 });
 
 // Fetch current status and statistics
-app.get("/api/status", async (req, res) => {
+app.get("/api/status", authenticate, async (req, res) => {
     let balance = null;
     let balanceRaw = "N/A";
 
@@ -226,7 +261,7 @@ app.get("/api/status", async (req, res) => {
 });
 
 // Start the bot execution
-app.post("/api/bot/start", (req, res) => {
+app.post("/api/bot/start", authenticate, (req, res) => {
     if (isRunning) {
         return res.status(400).json({ error: "Bot is already running." });
     }
@@ -250,7 +285,7 @@ app.post("/api/bot/start", (req, res) => {
 });
 
 // Stop the bot execution
-app.post("/api/bot/stop", (req, res) => {
+app.post("/api/bot/stop", authenticate, (req, res) => {
     if (!isRunning) {
         return res.status(400).json({ error: "Bot is not running." });
     }
@@ -271,12 +306,12 @@ app.post("/api/bot/stop", (req, res) => {
 });
 
 // Get current configuration
-app.get("/api/config", (req, res) => {
+app.get("/api/config", authenticate, (req, res) => {
     res.json(botModule.loadConfig());
 });
 
 // Save new configuration
-app.post("/api/config", (req, res) => {
+app.post("/api/config", authenticate, (req, res) => {
     try {
         const newConfig = req.body;
 
@@ -296,7 +331,7 @@ app.post("/api/config", (req, res) => {
 });
 
 // Get registered accounts
-app.get("/api/accounts", (req, res) => {
+app.get("/api/accounts", authenticate, (req, res) => {
     try {
         const accountsPath = path.join(__dirname, "accounts.json");
         if (fs.existsSync(accountsPath)) {
@@ -310,7 +345,7 @@ app.get("/api/accounts", (req, res) => {
 });
 
 // Get failed registration accounts (OTP received but registration failed)
-app.get("/api/failed-accounts", (req, res) => {
+app.get("/api/failed-accounts", authenticate, (req, res) => {
     try {
         const filePath = path.join(__dirname, "failed_registrations.json");
         if (fs.existsSync(filePath)) {

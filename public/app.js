@@ -57,6 +57,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalTitle = document.getElementById("modal-title");
     const modalMessage = document.getElementById("modal-message");
 
+    // Login Overlay Elements
+    const loginOverlay = document.getElementById("login-overlay");
+    const loginForm = document.getElementById("login-form");
+    const loginPasswordInput = document.getElementById("login-password");
+    const loginError = document.getElementById("login-error");
+
     // Logging & SSE State
     let eventSource = null;
     let pollIntervalId = null;
@@ -64,6 +70,37 @@ document.addEventListener("DOMContentLoaded", () => {
     // -------------------------------------------------------------
     // Core Functions
     // -------------------------------------------------------------
+
+    function getAuthHeaders() {
+        const token = localStorage.getItem("rex_auth_token") || "";
+        return {
+            "Authorization": `Bearer ${token}`
+        };
+    }
+
+    async function apiFetch(url, options = {}) {
+        const headers = {
+            ...options.headers,
+            ...getAuthHeaders()
+        };
+        const res = await fetch(url, { ...options, headers });
+        if (res.status === 401) {
+            localStorage.removeItem("rex_auth_token");
+            showLoginScreen();
+            throw new Error("Session expired. Please log in.");
+        }
+        return res;
+    }
+
+    function showLoginScreen() {
+        loginOverlay.classList.add("active");
+        loginPasswordInput.value = "";
+        loginPasswordInput.focus();
+    }
+
+    function hideLoginScreen() {
+        loginOverlay.classList.remove("active");
+    }
 
     // Helper to safely parse API responses
     async function safeParse(res) {
@@ -108,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Load System Configuration
     async function loadConfig() {
         try {
-            const res = await fetch(CONFIG_API);
+            const res = await apiFetch(CONFIG_API);
             const config = await safeParse(res);
             
             apiKeyInput.value = config.API_KEY || "";
@@ -130,7 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Load Registered Accounts Database Table
     async function loadAccounts() {
         try {
-            const res = await fetch(ACCOUNTS_API);
+            const res = await apiFetch(ACCOUNTS_API);
             const accounts = await safeParse(res);
             
             renderAccountsTable(accounts);
@@ -142,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Load Failed Registration Accounts Table
     async function loadFailedAccounts() {
         try {
-            const res = await fetch(FAILED_ACCOUNTS_API);
+            const res = await apiFetch(FAILED_ACCOUNTS_API);
             const failures = await safeParse(res);
             
             renderFailedAccountsTable(failures);
@@ -233,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Update Status, balance, and running stats
     async function updateStatus() {
         try {
-            const res = await fetch(STATUS_API);
+            const res = await apiFetch(STATUS_API);
             const status = await safeParse(res);
             
             setOnline(true);
@@ -275,7 +312,8 @@ document.addEventListener("DOMContentLoaded", () => {
             eventSource.close();
         }
 
-        eventSource = new EventSource(LOGS_STREAM_API);
+        const token = localStorage.getItem("rex_auth_token") || "";
+        eventSource = new EventSource(`${LOGS_STREAM_API}?token=${encodeURIComponent(token)}`);
 
         eventSource.onmessage = (event) => {
             try {
@@ -351,7 +389,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const res = await fetch(START_API, {
+            const res = await apiFetch(START_API, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ mode: selectedMode })
@@ -368,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Stop Bot Action
     stopBtn.addEventListener("click", async () => {
         try {
-            const res = await fetch(STOP_API, { method: "POST" });
+            const res = await apiFetch(STOP_API, { method: "POST" });
             const data = await safeParse(res);
             
             appendLogLine("[SYSTEM] Stop signal dispatched. Stopping after the current execution completes.", "warning");
@@ -415,7 +453,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         try {
-            const res = await fetch(CONFIG_API, {
+            const res = await apiFetch(CONFIG_API, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
@@ -454,7 +492,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Export Accounts Database History as JSON file
     exportBtn.addEventListener("click", async () => {
         try {
-            const res = await fetch(ACCOUNTS_API);
+            const res = await apiFetch(ACCOUNTS_API);
             const accounts = await safeParse(res);
             
             const blob = new Blob([JSON.stringify(accounts, null, 2)], { type: "application/json" });
@@ -476,14 +514,54 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Initialize App
-    loadConfig();
-    loadAccounts();
-    loadFailedAccounts();
-    updateStatus();
-    connectLogsStream();
+    const savedToken = localStorage.getItem("rex_auth_token");
+    if (!savedToken) {
+        showLoginScreen();
+    } else {
+        hideLoginScreen();
+        initDashboard();
+    }
 
-    // Start polling status every 3 seconds
-    pollIntervalId = setInterval(updateStatus, 3000);
+    function initDashboard() {
+        loadConfig();
+        loadAccounts();
+        loadFailedAccounts();
+        updateStatus();
+        connectLogsStream();
+        
+        if (pollIntervalId) clearInterval(pollIntervalId);
+        pollIntervalId = setInterval(updateStatus, 3000);
+    }
+
+    // Login Form Submit
+    loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        loginError.style.display = "none";
+        loginError.textContent = "";
+        
+        const password = loginPasswordInput.value;
+        try {
+            const res = await fetch("/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password })
+            });
+            
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Authentication failed.");
+            }
+            
+            const data = await res.json();
+            localStorage.setItem("rex_auth_token", data.token);
+            hideLoginScreen();
+            initDashboard();
+            appendLogLine("[SYSTEM] Access authorized. Dashboard initialized.", "success");
+        } catch (err) {
+            loginError.textContent = err.message;
+            loginError.style.display = "block";
+        }
+    });
 
     // -------------------------------------------------------------
     // Modal Interaction Handlers

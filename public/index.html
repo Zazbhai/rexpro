@@ -14,6 +14,30 @@
 </head>
 <body>
     <div class="glow-bg"></div>
+
+    <!-- Login Gate Overlay -->
+    <div id="login-overlay" class="login-overlay-container" style="display: none;">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="fa-solid fa-shield-halved logo-icon"></i>
+                <h2>Rex Access Authorization</h2>
+                <p>The dashboard is locked. Enter the system password to gain access.</p>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-password">Access Password</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-key"></i>
+                        <input type="password" id="login-password" placeholder="Enter Access Password" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-secondary" style="width: 100%;" id="login-submit-btn">
+                    <i class="fa-solid fa-right-to-bracket"></i> Authenticate
+                </button>
+                <div id="login-error" class="login-error-msg" style="display: none;"></div>
+            </form>
+        </div>
+    </div>
     
     <div class="app-container">
         <!-- HEADER -->
