@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rex Automation Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="logo-area">
+                <i class="fa-solid fa-robot logo-icon"></i>
+                <div class="logo-text">
+                    <h1>Rex Automation</h1>
+                    <span class="subtitle">Virtual SMS & Account Gen System</span>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="stat-pill balance-pill">
+                    <span class="label">SMS Balance</span>
+                    <span class="value" id="balance-value">Loading...</span>
+                    <i class="fa-solid fa-wallet icon"></i>
+                </div>
+                <div class="stat-pill status-pill offline" id="server-status">
+                    <span class="dot"></span>
+                    <span class="status-text">Server Status</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN DASHBOARD LAYOUT -->
+        <main class="dashboard-grid">
+            
+            <!-- LEFT PANEL: CONTROLS & STATS -->
+            <div class="grid-col left-col">
+                
+                <!-- CARD 1: CONTROLS -->
+                <section class="card control-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-gamepad header-icon"></i>Bot Engine Controls</h2>
+                    </div>
+                    
+                    <div class="control-box">
+                        <div class="mode-selector">
+                            <span class="box-label">Execution Mode</span>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="bot-mode" value="once" checked>
+                                    <span class="custom-radio"></span>
+                                    <span>Run Single Cycle</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="bot-mode" value="loop">
+                                    <span class="custom-radio"></span>
+                                    <span>Loop Continuously</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="bot-state-widget">
+                            <span class="box-label">Engine State</span>
+                            <div class="state-badge stopped" id="bot-state-badge">
+                                <i class="fa-solid fa-circle-stop"></i>
+                                <span id="bot-state-text">Stopped</span>
+                            </div>
+                        </div>
+
+                        <div class="button-row">
+                            <button id="start-btn" class="btn btn-primary btn-glow">
+                                <i class="fa-solid fa-play"></i> Start Bot
+                            </button>
+                            <button id="stop-btn" class="btn btn-danger" disabled>
+                                <i class="fa-solid fa-stop"></i> Stop Bot
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- CARD 2: RUN STATS -->
+                <section class="card stats-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-chart-simple header-icon"></i>Current Session Stats</h2>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-box success">
+                            <div class="icon-wrap"><i class="fa-solid fa-circle-check"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-count" id="stat-success">0</span>
+                                <span class="stat-label">Successful Registrations</span>
+                            </div>
+                        </div>
+                        <div class="stat-box error">
+                            <div class="icon-wrap"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-count" id="stat-errors">0</span>
+                                <span class="stat-label">Failed Runs</span>
+                            </div>
+                        </div>
+                        <div class="stat-box total">
+                            <div class="icon-wrap"><i class="fa-solid fa-users"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-count" id="stat-total">0</span>
+                                <span class="stat-label">Total Database Accounts</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- RIGHT PANEL: REAL-TIME CONSOLE -->
+            <div class="grid-col right-col">
+                <section class="card terminal-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-terminal header-icon"></i>Live Logs Feed</h2>
+                        <button class="btn btn-outline btn-sm" id="clear-logs-btn">
+                            <i class="fa-solid fa-trash-can"></i> Clear Screen
+                        </button>
+                    </div>
+                    <div class="terminal-body" id="log-terminal">
+                        <div class="log-line system">[SYSTEM] Welcome to Rex Automation console. Waiting for live updates...</div>
+                    </div>
+                </section>
+            </div>
+
+        </main>
+
+        <!-- CONFIGURATION CARD (EXPANDABLE/WIDE) -->
+        <section class="card config-card">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-sliders header-icon"></i>System Configuration Settings</h2>
+                <span class="hint">Modifying parameters will dynamically update subsequent request iterations</span>
+            </div>
+            
+            <form id="config-form" class="config-form">
+                <div class="form-grid">
+                    <!-- Column 1: API Settings -->
+                    <div class="form-group-wrap">
+                        <h3>API Configuration & Credentials</h3>
+                        <div class="form-group">
+                            <label for="cfg-api-key">SMS API Key</label>
+                            <div class="input-with-icon">
+                                <i class="fa-solid fa-key"></i>
+                                <input type="password" id="cfg-api-key" placeholder="Enter SMS API Key" required>
+                                <button type="button" class="toggle-password" id="toggle-api-key">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cfg-sms-url">Get Number API Url (SMS URL)</label>
+                            <div class="input-with-icon">
+                                <i class="fa-solid fa-link"></i>
+                                <input type="url" id="cfg-sms-url" placeholder="https://..." required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cfg-target-url">Target Registration API Url</label>
+                            <div class="input-with-icon">
+                                <i class="fa-solid fa-link"></i>
+                                <input type="url" id="cfg-target-url" placeholder="https://..." required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cfg-concurrency">Parallel Threads (Concurrency)</label>
+                            <div class="input-with-icon">
+                                <i class="fa-solid fa-layer-group"></i>
+                                <input type="number" id="cfg-concurrency" min="1" max="50" placeholder="e.g. 3" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cfg-proxy">Rotating Proxies List (Optional - One per line)</label>
+                            <div class="input-with-icon alignment-textarea">
+                                <i class="fa-solid fa-network-wired" style="top: 15px;"></i>
+                                <textarea id="cfg-proxy" rows="3" placeholder="http://ip:port&#10;http://user:pass@ip:port&#10;socks5://ip:port"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Parameters -->
+                    <div class="form-group-wrap">
+                        <h3>SMS Query Parameters</h3>
+                        <div class="form-row-three">
+                            <div class="form-group">
+                                <label for="cfg-country">Country Code</label>
+                                <input type="text" id="cfg-country" placeholder="e.g. 22" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="cfg-operator">Operator Code</label>
+                                <input type="text" id="cfg-operator" placeholder="e.g. 10" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="cfg-service">Service ID</label>
+                                <input type="text" id="cfg-service" placeholder="e.g. lmeh" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row-two">
+                            <div class="form-group">
+                                <label for="cfg-invite">Invite / Promo Code</label>
+                                <div class="input-with-icon">
+                                    <i class="fa-solid fa-hashtag"></i>
+                                    <input type="text" id="cfg-invite" placeholder="e.g. TDPARP" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="cfg-password">Default Registration Password</label>
+                                <div class="input-with-icon">
+                                    <i class="fa-solid fa-lock"></i>
+                                    <input type="text" id="cfg-password" placeholder="Password template" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-secondary" id="save-config-btn">
+                        <i class="fa-solid fa-floppy-disk"></i> Save System Config
+                    </button>
+                    <span class="save-status" id="save-status"></span>
+                </div>
+            </form>
+        </section>
+
+        <!-- ACCOUNTS LOG / HISTORY -->
+        <section class="card history-card">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-list-check header-icon"></i>Created Accounts Database History</h2>
+                <div class="header-actions">
+                    <button class="btn btn-outline btn-sm" id="export-btn">
+                        <i class="fa-solid fa-download"></i> Export JSON
+                    </button>
+                    <button class="btn btn-outline btn-sm" id="refresh-btn">
+                        <i class="fa-solid fa-arrows-rotate"></i> Refresh List
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="accounts-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Phone Number</th>
+                            <th>Password</th>
+                            <th>OTP Code</th>
+                            <th>JWT Token Output</th>
+                            <th>Created Timestamp</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accounts-table-body">
+                        <tr>
+                            <td colspan="7" class="empty-state">
+                                <i class="fa-solid fa-database"></i>
+                                <p>No registered accounts found in database. Start the bot to create one.</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- FAILED REGISTRATIONS LOG -->
+        <section class="card history-card failed-history-card" style="margin-top: 25px;">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-triangle-exclamation header-icon" style="color: var(--danger);"></i>Failed Registrations (OTP Received)</h2>
+                <div class="header-actions">
+                    <button class="btn btn-outline btn-sm" id="failed-refresh-btn">
+                        <i class="fa-solid fa-arrows-rotate"></i> Refresh Failures
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="accounts-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Phone Number</th>
+                            <th>Password</th>
+                            <th>OTP Code</th>
+                            <th>Error Message</th>
+                            <th>Failed Timestamp</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="failed-table-body">
+                        <tr>
+                            <td colspan="7" class="empty-state">
+                                <i class="fa-solid fa-circle-check" style="color: var(--success); font-size: 32px; margin-bottom: 10px;"></i>
+                                <p>No failed registration attempts with OTPs recorded.</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Error Alert Modal -->
+    <div id="error-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <i class="fa-solid fa-circle-exclamation modal-icon"></i>
+                <h3 id="modal-title">IP Address Flagged</h3>
+            </div>
+            <div class="modal-body">
+                <p id="modal-message">Your IP address might be flagged by the target website. Please try again after some time or use rotating proxies.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="close-modal-btn">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script connection -->
+    <script src="app.js"></script>
+</body>
+</html>
