@@ -277,7 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Balance check
             if (status.balance !== null) {
-                balanceValue.textContent = `$${status.balance}`;
+                balanceValue.textContent = `₹${status.balance}`;
             } else {
                 balanceValue.textContent = status.balanceRaw || "Error";
             }

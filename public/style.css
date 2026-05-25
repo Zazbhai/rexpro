@@ -1050,3 +1050,73 @@ textarea:focus {
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 768px) {
+    .app-container {
+        width: 95%;
+        padding-top: 15px;
+    }
+
+    .app-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+        padding: 15px 20px;
+    }
+    
+    .logo-area {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .header-stats {
+        width: 100%;
+        justify-content: center;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .stat-pill {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .form-row-three,
+    .form-row-two {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .terminal-body {
+        height: 280px;
+    }
+
+    .card-header {
+        padding: 14px 18px;
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+
+    .card-header h2 {
+        justify-content: center;
+    }
+
+    .header-actions {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .login-card {
+        padding: 25px 20px;
+    }
+}
