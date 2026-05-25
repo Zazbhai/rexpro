@@ -7,7 +7,7 @@ const botModule = require("./main");
 let activeChildProcesses = [];
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3004;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -114,11 +114,11 @@ let activeWorkersCount = 0;
 async function runWorker(workerId) {
     activeWorkersCount++;
     broadcastLog(`[Worker ${workerId}] Launched.`);
-    
+
     try {
         while (isRunning) {
             broadcastLog(`[Worker ${workerId}] Starting registration cycle...`);
-            
+
             const result = await runPlaywrightScript(workerId);
 
             if (result.success) {
@@ -142,7 +142,7 @@ async function runWorker(workerId) {
     } finally {
         activeWorkersCount--;
         broadcastLog(`[Worker ${workerId}] Stopped.`);
-        
+
         if (activeWorkersCount === 0) {
             isRunning = false;
             broadcastLog("All workers stopped. Automation execution completed.");
@@ -177,7 +177,7 @@ app.get("/api/logs/stream", (req, res) => {
 app.get("/api/status", async (req, res) => {
     let balance = null;
     let balanceRaw = "N/A";
-    
+
     try {
         const config = botModule.loadConfig();
         balanceRaw = await botModule.getBalance(config);
@@ -223,7 +223,7 @@ app.post("/api/bot/start", (req, res) => {
     const concurrency = Math.max(1, parseInt(config.CONCURRENCY) || 1);
 
     broadcastLog(`Automation started by user in '${botMode}' mode with ${concurrency} parallel workers.`);
-    
+
     // Spawn threads/workers in parallel
     for (let i = 1; i <= concurrency; i++) {
         runWorker(i);
@@ -240,7 +240,7 @@ app.post("/api/bot/stop", (req, res) => {
 
     isRunning = false;
     broadcastLog("Bot stop requested. Terminating all active browser processes...");
-    
+
     activeChildProcesses.forEach(child => {
         try {
             child.kill();
@@ -262,7 +262,7 @@ app.get("/api/config", (req, res) => {
 app.post("/api/config", (req, res) => {
     try {
         const newConfig = req.body;
-        
+
         // Basic validations
         if (!newConfig.SMS_BASE_URL || !newConfig.API_KEY || !newConfig.TARGET_BASE_URL) {
             return res.status(400).json({ error: "URLs and API Key are required." });
@@ -270,7 +270,7 @@ app.post("/api/config", (req, res) => {
 
         const configPath = path.join(__dirname, "config.json");
         fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), "utf8");
-        
+
         broadcastLog("Configuration updated by user.");
         res.json({ success: true, config: newConfig });
     } catch (err) {
