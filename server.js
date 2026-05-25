@@ -44,12 +44,29 @@ function broadcastLog(text) {
     });
 }
 
+function getPythonExecutable() {
+    const isWin = process.platform === "win32";
+    const venvPaths = ["venv", ".venv"];
+    
+    for (const venv of venvPaths) {
+        const binDir = isWin ? "Scripts" : "bin";
+        const exeName = isWin ? "python.exe" : "python";
+        const fullPath = path.join(__dirname, venv, binDir, exeName);
+        if (fs.existsSync(fullPath)) {
+            return fullPath;
+        }
+    }
+    
+    return isWin ? "python" : "python3";
+}
+
 // -------------------------------------------------------------
 // Playwright Python Script Runner
 // -------------------------------------------------------------
 function runPlaywrightScript(workerId) {
     return new Promise((resolve, reject) => {
-        const child = spawn("python", ["-u", "register_automation.py"], {
+        const pythonExe = getPythonExecutable();
+        const child = spawn(pythonExe, ["-u", "register_automation.py"], {
             cwd: __dirname
         });
 
