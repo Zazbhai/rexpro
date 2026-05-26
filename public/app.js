@@ -76,6 +76,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const newPasswordChangeInput = document.getElementById("new-password-change");
     const changePasswordMsg = document.getElementById("change-password-msg");
 
+    const changeUsernameBtn = document.getElementById("change-username-btn");
+    const usernameModal = document.getElementById("username-modal");
+    const closeUsernameModalBtn = document.getElementById("close-username-modal-btn");
+    const changeUsernameForm = document.getElementById("change-username-form");
+    const newUsernameChangeInput = document.getElementById("new-username-change");
+    const changeUsernameMsg = document.getElementById("change-username-msg");
+
     const clearDataBtn = document.getElementById("clear-data-btn");
     const currentUserDisplay = document.getElementById("current-user-display");
     const logoutBtn = document.getElementById("logout-btn");
@@ -514,6 +521,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;">
                     <span><i class="fa-solid fa-user"></i> ${u.username}</span>
                     <div>
+                        <button class="btn btn-outline btn-sm" style="margin-right: 5px;" onclick="window.changeUserUsername('${u.username}')" title="Change Username"><i class="fa-solid fa-user-pen"></i></button>
                         <button class="btn btn-outline btn-sm" style="margin-right: 5px;" onclick="window.changeUserPassword('${u.username}')" title="Change User's Password"><i class="fa-solid fa-key"></i></button>
                         <button class="btn btn-danger btn-sm" onclick="window.deleteUser('${u.username}')" title="Delete User"><i class="fa-solid fa-trash"></i></button>
                     </div>
@@ -523,6 +531,24 @@ document.addEventListener("DOMContentLoaded", () => {
             usersList.innerHTML = `<li>Failed to load users: ${err.message}</li>`;
         }
     }
+
+    window.changeUserUsername = async (username) => {
+        const newUsername = prompt(`Enter new username for user '${username}':`);
+        if (!newUsername) return;
+        
+        try {
+            const res = await apiFetch(`${USERS_API}/${username}/username`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ newUsername })
+            });
+            await safeParse(res);
+            alert(`Username changed successfully to '${newUsername}'.`);
+            loadUsers();
+        } catch (err) {
+            alert(`Failed to change username: ${err.message}`);
+        }
+    };
 
     window.changeUserPassword = async (username) => {
         const newPassword = prompt(`Enter new password for user '${username}':`);
@@ -636,6 +662,44 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             changePasswordMsg.style.color = "var(--danger)";
             changePasswordMsg.textContent = `Error: ${err.message}`;
+        }
+    });
+
+    changeUsernameBtn.addEventListener("click", () => {
+        usernameModal.classList.add("active");
+        newUsernameChangeInput.value = localStorage.getItem("rex_auth_user") || "";
+    });
+    closeUsernameModalBtn.addEventListener("click", () => {
+        usernameModal.classList.remove("active");
+    });
+
+    changeUsernameForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        changeUsernameMsg.style.color = "var(--text-color)";
+        changeUsernameMsg.textContent = "Updating...";
+        
+        try {
+            const res = await apiFetch("/api/change-username", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    newUsername: newUsernameChangeInput.value
+                })
+            });
+            const data = await safeParse(res);
+            
+            changeUsernameMsg.style.color = "var(--success)";
+            changeUsernameMsg.textContent = "Username updated successfully!";
+            localStorage.setItem("rex_auth_user", data.newUsername);
+            currentUserDisplay.textContent = data.newUsername;
+            
+            setTimeout(() => {
+                changeUsernameMsg.textContent = "";
+                usernameModal.classList.remove("active");
+            }, 2000);
+        } catch (err) {
+            changeUsernameMsg.style.color = "var(--danger)";
+            changeUsernameMsg.textContent = `Error: ${err.message}`;
         }
     });
 

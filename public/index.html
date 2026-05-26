@@ -61,6 +61,9 @@
                     <span class="label" id="current-user-display">User</span>
                     <i class="fa-solid fa-user icon"></i>
                 </div>
+                <button id="change-username-btn" class="btn btn-outline btn-sm" style="margin-right: 10px;" title="Change Username">
+                    <i class="fa-solid fa-user-pen"></i>
+                </button>
                 <button id="change-password-btn" class="btn btn-outline btn-sm" style="margin-right: 10px;" title="Change Password">
                     <i class="fa-solid fa-key"></i>
                 </button>
@@ -412,6 +415,29 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline" id="close-password-modal-btn" style="margin-right: 10px;">Cancel</button>
+                    <button type="submit" class="btn btn-secondary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Username Modal -->
+    <div id="username-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <i class="fa-solid fa-user-pen modal-icon"></i>
+                <h3>Change Username</h3>
+            </div>
+            <form id="change-username-form">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="new-username-change">New Username</label>
+                        <input type="text" id="new-username-change" required style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
+                    </div>
+                    <div id="change-username-msg" style="margin-top: 10px; font-size: 0.9em;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" id="close-username-modal-btn" style="margin-right: 10px;">Cancel</button>
                     <button type="submit" class="btn btn-secondary">Save Changes</button>
                 </div>
             </form>

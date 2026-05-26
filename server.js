@@ -7,7 +7,7 @@ const crypto = require("crypto");
 require("dotenv").config();
 const botModule = require("./main");
 
-const SUPERADMIN_USERNAME = process.env.SUPERADMIN_USERNAME || "admin";
+let SUPERADMIN_USERNAME = process.env.SUPERADMIN_USERNAME || "admin";
 const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || "Otpzfast1#";
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "Zazbhai8709#"; // Fallback for old configs
 
@@ -373,6 +373,37 @@ app.post("/api/users/:username/password", authenticate, requireSuperAdmin, (req,
         res.status(500).json({ error: "Failed to update user password." });
     }
 });
+app.post("/api/users/:username/username", authenticate, requireSuperAdmin, (req, res) => {
+    const { username } = req.params;
+    const { newUsername } = req.body;
+    
+    if (!newUsername) return res.status(400).json({ error: "New username is required." });
+    if (newUsername === SUPERADMIN_USERNAME) return res.status(400).json({ error: "Username already taken." });
+    
+    try {
+        const usersPath = path.join(__dirname, "users.json");
+        let users = [];
+        if (fs.existsSync(usersPath)) users = JSON.parse(fs.readFileSync(usersPath, "utf8"));
+        
+        if (users.find(u => u.username === newUsername)) {
+            return res.status(400).json({ error: "Username already taken." });
+        }
+
+        const userIndex = users.findIndex(u => u.username === username);
+        if (userIndex === -1) {
+            return res.status(404).json({ error: "User not found." });
+        }
+        
+        users[userIndex].username = newUsername;
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+        
+        updateUsernameData(username, newUsername);
+        
+        res.json({ success: true, newUsername });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to update user username." });
+    }
+});
 
 app.post("/api/clear-data", authenticate, (req, res) => {
     const targetUser = req.body.username || req.username;
@@ -397,6 +428,75 @@ app.post("/api/clear-data", authenticate, (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: "Failed to clear data" });
+    }
+});
+
+function updateUsernameData(oldUsername, newUsername) {
+    const oldDir = path.join(__dirname, "data", oldUsername);
+    const newDir = path.join(__dirname, "data", newUsername);
+    if (fs.existsSync(oldDir) && !fs.existsSync(newDir)) {
+        fs.renameSync(oldDir, newDir);
+    }
+    
+    for (const token in sessions) {
+        if (sessions[token] === oldUsername) {
+            sessions[token] = newUsername;
+        }
+    }
+    saveSessions();
+
+    if (userStates[oldUsername]) {
+        userStates[newUsername] = userStates[oldUsername];
+        delete userStates[oldUsername];
+    }
+}
+
+app.post("/api/change-username", authenticate, (req, res) => {
+    const { newUsername } = req.body;
+    if (!newUsername) return res.status(400).json({ error: "New username is required." });
+
+    try {
+        if (req.role === "superadmin" && req.username === SUPERADMIN_USERNAME) {
+            const envPath = path.join(__dirname, ".env");
+            let envContent = "";
+            if (fs.existsSync(envPath)) {
+                envContent = fs.readFileSync(envPath, "utf8");
+                if (envContent.includes("SUPERADMIN_USERNAME=")) {
+                    envContent = envContent.replace(/SUPERADMIN_USERNAME=.*/g, `SUPERADMIN_USERNAME="${newUsername}"`);
+                } else {
+                    envContent += `\nSUPERADMIN_USERNAME="${newUsername}"`;
+                }
+            } else {
+                envContent = `SUPERADMIN_USERNAME="${newUsername}"`;
+            }
+            fs.writeFileSync(envPath, envContent, "utf8");
+            process.env.SUPERADMIN_USERNAME = newUsername;
+            
+            updateUsernameData(req.username, newUsername);
+            SUPERADMIN_USERNAME = newUsername;
+            return res.json({ success: true, newUsername });
+        } else {
+            const usersPath = path.join(__dirname, "users.json");
+            let users = [];
+            if (fs.existsSync(usersPath)) {
+                users = JSON.parse(fs.readFileSync(usersPath, "utf8"));
+            }
+            if (users.find(u => u.username === newUsername) || newUsername === SUPERADMIN_USERNAME) {
+                return res.status(400).json({ error: "Username already taken." });
+            }
+            const userIndex = users.findIndex(u => u.username === req.username);
+            if (userIndex === -1) {
+                return res.status(404).json({ error: "User not found." });
+            }
+            
+            users[userIndex].username = newUsername;
+            fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), "utf8");
+            
+            updateUsernameData(req.username, newUsername);
+            return res.json({ success: true, newUsername });
+        }
+    } catch (err) {
+        return res.status(500).json({ error: `Failed to change username: ${err.message}` });
     }
 });
 
