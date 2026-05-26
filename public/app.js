@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const STOP_API = "/api/bot/stop";
     const LOGS_STREAM_API = "/api/logs/stream";
     const FAILED_ACCOUNTS_API = "/api/failed-accounts";
+    const USERS_API = "/api/users";
+    const CLEAR_DATA_API = "/api/clear-data";
 
     const startBtn = document.getElementById("start-btn");
     const stopBtn = document.getElementById("stop-btn");
@@ -53,8 +55,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const loginOverlay = document.getElementById("login-overlay");
     const loginForm = document.getElementById("login-form");
+    const loginUsernameInput = document.getElementById("login-username");
     const loginPasswordInput = document.getElementById("login-password");
     const loginError = document.getElementById("login-error");
+
+    const manageUsersBtn = document.getElementById("manage-users-btn");
+    const usersModal = document.getElementById("users-modal");
+    const closeUsersModalBtn = document.getElementById("close-users-modal-btn");
+    const createUserForm = document.getElementById("create-user-form");
+    const newUsernameInput = document.getElementById("new-username");
+    const newPasswordInput = document.getElementById("new-password");
+    const usersList = document.getElementById("users-list");
+    const createUserMsg = document.getElementById("create-user-msg");
+
+    const changePasswordBtn = document.getElementById("change-password-btn");
+    const passwordModal = document.getElementById("password-modal");
+    const closePasswordModalBtn = document.getElementById("close-password-modal-btn");
+    const changePasswordForm = document.getElementById("change-password-form");
+    const oldPasswordInput = document.getElementById("old-password");
+    const newPasswordChangeInput = document.getElementById("new-password-change");
+    const changePasswordMsg = document.getElementById("change-password-msg");
+
+    const clearDataBtn = document.getElementById("clear-data-btn");
+    const currentUserDisplay = document.getElementById("current-user-display");
+    const logoutBtn = document.getElementById("logout-btn");
 
     let eventSource = null;
     let pollIntervalId = null;
@@ -73,17 +97,27 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         const res = await fetch(url, { ...options, headers });
         if (res.status === 401) {
-            localStorage.removeItem("rex_auth_token");
-            showLoginScreen();
+            doLogout();
             throw new Error("Session expired. Please log in.");
         }
         return res;
     }
 
+    function doLogout() {
+        localStorage.removeItem("rex_auth_token");
+        localStorage.removeItem("rex_auth_role");
+        localStorage.removeItem("rex_auth_user");
+        if (eventSource) eventSource.close();
+        if (pollIntervalId) clearInterval(pollIntervalId);
+        showLoginScreen();
+    }
+
     function showLoginScreen() {
         loginOverlay.classList.add("active");
         loginPasswordInput.value = "";
-        loginPasswordInput.focus();
+        if (loginUsernameInput) loginUsernameInput.value = "";
+        loginUsernameInput.focus();
+        manageUsersBtn.style.display = "none";
     }
 
     function hideLoginScreen() {
@@ -99,7 +133,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 errorMsg = errJson.error || errorMsg;
             } else {
                 const errText = await res.text();
-                
                 errorMsg = errText.replace(/<[^>]*>/g, '').trim() || errorMsg;
                 if (errorMsg.length > 100) errorMsg = errorMsg.substring(0, 100) + "...";
             }
@@ -154,7 +187,6 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await apiFetch(ACCOUNTS_API);
             const accounts = await safeParse(res);
-            
             renderAccountsTable(accounts);
         } catch (err) {
             appendLogLine(`[SYSTEM] Failed to load accounts history: ${err.message}`, "error");
@@ -165,7 +197,6 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await apiFetch(FAILED_ACCOUNTS_API);
             const failures = await safeParse(res);
-            
             renderFailedAccountsTable(failures);
         } catch (err) {
             appendLogLine(`[SYSTEM] Failed to load failed accounts: ${err.message}`, "error");
@@ -301,11 +332,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 if (msg.includes("success") || msg.includes("completed successfully")) {
                     type = "success";
-                    
                     loadAccounts();
                 } else if (msg.includes("error") || msg.includes("failed") || msg.includes("failure")) {
                     type = "error";
-                    
                     loadFailedAccounts();
                     
                     if (msg.includes("exceeds the limit") || msg.includes("limit exceeded")) {
@@ -362,7 +391,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ mode: selectedMode })
             });
-            const data = await safeParse(res);
+            await safeParse(res);
             
             appendLogLine(`[SYSTEM] Start signal dispatched in '${selectedMode}' mode.`, "system");
             updateStatus();
@@ -374,7 +403,7 @@ document.addEventListener("DOMContentLoaded", () => {
     stopBtn.addEventListener("click", async () => {
         try {
             const res = await apiFetch(STOP_API, { method: "POST" });
-            const data = await safeParse(res);
+            await safeParse(res);
             
             appendLogLine("[SYSTEM] Stop signal dispatched. Stopping after the current execution completes.", "warning");
             updateStatus();
@@ -424,7 +453,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
-            const data = await safeParse(res);
+            await safeParse(res);
 
             saveStatus.className = "save-status success";
             saveStatus.innerHTML = '<i class="fa-solid fa-circle-check"></i> Configurations saved!';
@@ -475,6 +504,149 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Superadmin specific functions
+    async function loadUsers() {
+        try {
+            const res = await apiFetch(USERS_API);
+            const users = await safeParse(res);
+            
+            usersList.innerHTML = users.map(u => `
+                <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;">
+                    <span><i class="fa-solid fa-user"></i> ${u.username}</span>
+                    <div>
+                        <button class="btn btn-outline btn-sm" style="margin-right: 5px;" onclick="window.changeUserPassword('${u.username}')" title="Change User's Password"><i class="fa-solid fa-key"></i></button>
+                        <button class="btn btn-danger btn-sm" onclick="window.deleteUser('${u.username}')" title="Delete User"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </li>
+            `).join("") || "<li>No users found.</li>";
+        } catch (err) {
+            usersList.innerHTML = `<li>Failed to load users: ${err.message}</li>`;
+        }
+    }
+
+    window.changeUserPassword = async (username) => {
+        const newPassword = prompt(`Enter new password for user '${username}':`);
+        if (!newPassword) return;
+        
+        try {
+            const res = await apiFetch(`${USERS_API}/${username}/password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ newPassword })
+            });
+            await safeParse(res);
+            alert(`Password for user '${username}' successfully updated.`);
+        } catch (err) {
+            alert(`Failed to change password: ${err.message}`);
+        }
+    };
+
+    window.deleteUser = async (username) => {
+        if (!confirm(`Are you sure you want to delete user '${username}'?`)) return;
+        try {
+            const res = await apiFetch(`${USERS_API}/${username}`, { method: "DELETE" });
+            await safeParse(res);
+            loadUsers();
+            alert("User deleted.");
+        } catch (err) {
+            alert(`Failed to delete user: ${err.message}`);
+        }
+    };
+
+    createUserForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        createUserMsg.style.color = "var(--text-color)";
+        createUserMsg.textContent = "Creating...";
+
+        try {
+            const res = await apiFetch(USERS_API, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username: newUsernameInput.value,
+                    password: newPasswordInput.value,
+                    role: "user"
+                })
+            });
+            await safeParse(res);
+            
+            createUserMsg.style.color = "var(--success)";
+            createUserMsg.textContent = "User created successfully!";
+            newUsernameInput.value = "";
+            newPasswordInput.value = "";
+            loadUsers();
+            setTimeout(() => { createUserMsg.textContent = ""; }, 3000);
+        } catch (err) {
+            createUserMsg.style.color = "var(--danger)";
+            createUserMsg.textContent = `Error: ${err.message}`;
+        }
+    });
+
+    clearDataBtn.addEventListener("click", async () => {
+        if (!confirm("Are you sure you want to CLEAR all success and failed registration data for this user? This cannot be undone.")) return;
+        try {
+            const res = await apiFetch(CLEAR_DATA_API, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({})
+            });
+            await safeParse(res);
+            alert("Data cleared successfully.");
+            loadAccounts();
+            loadFailedAccounts();
+            updateStatus();
+        } catch (err) {
+            alert(`Failed to clear data: ${err.message}`);
+        }
+    });
+
+    logoutBtn.addEventListener("click", doLogout);
+
+    changePasswordBtn.addEventListener("click", () => {
+        passwordModal.classList.add("active");
+    });
+    closePasswordModalBtn.addEventListener("click", () => {
+        passwordModal.classList.remove("active");
+    });
+    
+    changePasswordForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        changePasswordMsg.style.color = "var(--text-color)";
+        changePasswordMsg.textContent = "Updating...";
+        
+        try {
+            const res = await apiFetch("/api/change-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    oldPassword: oldPasswordInput.value,
+                    newPassword: newPasswordChangeInput.value
+                })
+            });
+            await safeParse(res);
+            
+            changePasswordMsg.style.color = "var(--success)";
+            changePasswordMsg.textContent = "Password updated successfully!";
+            oldPasswordInput.value = "";
+            newPasswordChangeInput.value = "";
+            setTimeout(() => {
+                changePasswordMsg.textContent = "";
+                passwordModal.classList.remove("active");
+            }, 2000);
+        } catch (err) {
+            changePasswordMsg.style.color = "var(--danger)";
+            changePasswordMsg.textContent = `Error: ${err.message}`;
+        }
+    });
+
+    manageUsersBtn.addEventListener("click", () => {
+        usersModal.classList.add("active");
+        loadUsers();
+    });
+    closeUsersModalBtn.addEventListener("click", () => {
+        usersModal.classList.remove("active");
+    });
+
     const savedToken = localStorage.getItem("rex_auth_token");
     if (!savedToken) {
         showLoginScreen();
@@ -484,6 +656,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function initDashboard() {
+        const role = localStorage.getItem("rex_auth_role");
+        const user = localStorage.getItem("rex_auth_user") || "User";
+        currentUserDisplay.textContent = user;
+
+        if (role === "superadmin") {
+            manageUsersBtn.style.display = "inline-flex";
+        } else {
+            manageUsersBtn.style.display = "none";
+        }
+
         loadConfig();
         loadAccounts();
         loadFailedAccounts();
@@ -499,12 +681,13 @@ document.addEventListener("DOMContentLoaded", () => {
         loginError.style.display = "none";
         loginError.textContent = "";
         
+        const username = loginUsernameInput.value;
         const password = loginPasswordInput.value;
         try {
             const res = await fetch("/api/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ password })
+                body: JSON.stringify({ username, password })
             });
             
             if (!res.ok) {
@@ -514,6 +697,9 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const data = await res.json();
             localStorage.setItem("rex_auth_token", data.token);
+            localStorage.setItem("rex_auth_role", data.role);
+            localStorage.setItem("rex_auth_user", data.username);
+            
             hideLoginScreen();
             initDashboard();
             appendLogLine("[SYSTEM] Access authorized. Dashboard initialized.", "success");
@@ -542,7 +728,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function copyText(text, label) {
     navigator.clipboard.writeText(text).then(() => {
-        
         const date = new Date().toLocaleTimeString();
         const logTerminal = document.getElementById("log-terminal");
         if (logTerminal) {

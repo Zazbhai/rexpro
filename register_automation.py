@@ -4,19 +4,25 @@ import sys
 import json
 import re
 import time
+import argparse
 import urllib.request
 import urllib.parse
 from typing import Any, Dict, Optional, Tuple
 from playwright.sync_api import sync_playwright
 
-def load_config() -> Dict[str, Any]:
-    config_path = os.path.join(os.path.dirname(__file__), "config.json")
+def get_data_dir(username: str) -> str:
+    data_dir = os.path.join(os.path.dirname(__file__), "data", username)
+    os.makedirs(data_dir, exist_ok=True)
+    return data_dir
+
+def load_config(username: str) -> Dict[str, Any]:
+    config_path = os.path.join(get_data_dir(username), "config.json")
     if os.path.exists(config_path):
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error loading config.json: {e}")
+            print(f"Error loading config.json for user {username}: {e}")
     
     return {
         "SMS_BASE_URL": "https://zotp.in/stubs/handler_api.php",
@@ -101,8 +107,8 @@ def extract_otp(text: str) -> Optional[str]:
         return None
     return matches[-1]
 
-def save_successful_account(phone_number: str, password: str, sms_code: str, jwt_token: str = "PLAYWRIGHT_SUCCESS"):
-    file_path = os.path.join(os.path.dirname(__file__), "accounts.json")
+def save_successful_account(username: str, phone_number: str, password: str, sms_code: str, jwt_token: str = "PLAYWRIGHT_SUCCESS"):
+    file_path = os.path.join(get_data_dir(username), "accounts.json")
     accounts = []
     try:
         if os.path.exists(file_path):
@@ -126,8 +132,8 @@ def save_successful_account(phone_number: str, password: str, sms_code: str, jwt
     except Exception as e:
         print(f"Error writing to accounts.json: {e}")
 
-def save_failed_registration(phone_number: str, password: str, sms_code: str, error_message: str):
-    file_path = os.path.join(os.path.dirname(__file__), "failed_registrations.json")
+def save_failed_registration(username: str, phone_number: str, password: str, sms_code: str, error_message: str):
+    file_path = os.path.join(get_data_dir(username), "failed_registrations.json")
     failures = []
     try:
         if os.path.exists(file_path):
@@ -151,8 +157,8 @@ def save_failed_registration(phone_number: str, password: str, sms_code: str, er
     except Exception as e:
         print(f"Error writing to failed_registrations.json: {e}")
 
-def run_registration():
-    config = load_config()
+def run_registration(username: str):
+    config = load_config(username)
     invite_code = config.get("INVITE_CODE", "TDPARP")
     password = config.get("PASSWORD", "Zazbhai8709#")
     
@@ -174,18 +180,16 @@ def run_registration():
     selected_proxy = ""
     
     if proxy_val:
-        
         proxies = [p.strip() for p in proxy_val.split("\n") if p.strip()]
         if proxies:
             selected_proxy = proxies[0]
             print(f"Configuring browser proxy: {selected_proxy}")
             server_url = selected_proxy
-            username = None
-            password = None
+            p_username = None
+            p_password = None
             
             if "@" in selected_proxy:
                 try:
-                    
                     schema_part = ""
                     if "://" in selected_proxy:
                         schema_part, rest = selected_proxy.split("://", 1)
@@ -196,15 +200,15 @@ def run_registration():
                     user_part, pass_part = auth_part.split(":", 1)
                     
                     server_url = f"{schema_part}://{host_part}" if schema_part else host_part
-                    username = user_part
-                    password = pass_part
+                    p_username = user_part
+                    p_password = pass_part
                 except Exception as e:
                     print(f"Warning: Failed to parse authenticated proxy URL. Using raw proxy string. ({e})")
             
             proxy_settings = {"server": server_url}
-            if username and password:
-                proxy_settings["username"] = username
-                proxy_settings["password"] = password
+            if p_username and p_password:
+                proxy_settings["username"] = p_username
+                proxy_settings["password"] = p_password
 
     def rotate_proxies():
         if not proxy_val:
@@ -217,7 +221,7 @@ def run_registration():
             rotated = proxies[1:] + [proxies[0]]
             new_proxy_str = "\n".join(rotated)
             
-            config_path = os.path.join(os.path.dirname(__file__), "config.json")
+            config_path = os.path.join(get_data_dir(username), "config.json")
             if os.path.exists(config_path):
                 with open(config_path, "r", encoding="utf-8") as f:
                     cfg_data = json.load(f)
@@ -232,7 +236,6 @@ def run_registration():
 
     with sync_playwright() as p:
         browser_args = {
-            
             "args": [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
@@ -265,7 +268,6 @@ def run_registration():
         page.route("**/*", route_handler)
 
         try:
-            
             target_host = "https://rch5.rexproearn.com"
             registration_url = f"{target_host}/reg/?code={invite_code}"
             print(f"Navigating to: {registration_url}")
@@ -325,7 +327,6 @@ def run_registration():
             print("Clicking 'Register' button...")
             
             try:
-                
                 register_selector = 'uni-button:has-text("Register")'
                 for selector in [
                     'uni-button:has-text("Register")',
@@ -356,8 +357,7 @@ def run_registration():
                 
                 if msg == "success" or code == 200:
                     print("Registration successfully validated on target server.")
-                    
-                    save_successful_account(phone_number, password, sms_code, jwt_token or "PLAYWRIGHT_SUCCESS")
+                    save_successful_account(username, phone_number, password, sms_code, jwt_token or "PLAYWRIGHT_SUCCESS")
                 else:
                     err_msg = msg or f"Registration failed with code {code}"
                     raise ValueError(err_msg)
@@ -376,7 +376,7 @@ def run_registration():
                 err_msg = str(e)
                 if err_msg.startswith("Registration API failure: "):
                     err_msg = err_msg.replace("Registration API failure: ", "")
-                save_failed_registration(phone_number, password, sms_code, err_msg)
+                save_failed_registration(username, phone_number, password, sms_code, err_msg)
             print("Cancelling number due to execution failure...")
             cancel_number(request_id, config)
             
@@ -391,4 +391,8 @@ def run_registration():
             browser.close()
 
 if __name__ == "__main__":
-    run_registration()
+    parser = argparse.ArgumentParser(description="Run registration automation")
+    parser.add_argument("--username", type=str, default="legacy_user", help="Username to scope data files")
+    args = parser.parse_args()
+    
+    run_registration(args.username)

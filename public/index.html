@@ -21,9 +21,16 @@
             <div class="login-header">
                 <i class="fa-solid fa-shield-halved logo-icon"></i>
                 <h2>Rex Access Authorization</h2>
-                <p>The dashboard is locked. Enter the system password to gain access.</p>
+                <p>The dashboard is locked. Enter your credentials to gain access.</p>
             </div>
             <form id="login-form">
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="login-username" placeholder="Enter Username" required>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label for="login-password">Access Password</label>
                     <div class="input-with-icon">
@@ -50,6 +57,19 @@
                 </div>
             </div>
             <div class="header-stats">
+                <div class="stat-pill balance-pill" style="margin-right: 10px;">
+                    <span class="label" id="current-user-display">User</span>
+                    <i class="fa-solid fa-user icon"></i>
+                </div>
+                <button id="change-password-btn" class="btn btn-outline btn-sm" style="margin-right: 10px;" title="Change Password">
+                    <i class="fa-solid fa-key"></i>
+                </button>
+                <button id="manage-users-btn" class="btn btn-primary btn-sm" style="margin-right: 10px; display: none;" title="Manage Users">
+                    <i class="fa-solid fa-users-gear"></i> Manage Users
+                </button>
+                <button id="logout-btn" class="btn btn-outline btn-sm" style="margin-right: 15px;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </button>
                 <div class="stat-pill balance-pill">
                     <span class="label">SMS Balance</span>
                     <span class="value" id="balance-value">Loading...</span>
@@ -61,6 +81,8 @@
                 </div>
             </div>
         </header>
+
+        <!-- Removed inline admin panel, moved to modal below -->
 
         <main class="dashboard-grid">
             
@@ -281,6 +303,9 @@
             <div class="card-header">
                 <h2><i class="fa-solid fa-list-check header-icon"></i>Created Accounts Database History</h2>
                 <div class="header-actions">
+                    <button class="btn btn-danger btn-sm" id="clear-data-btn" style="margin-right: 10px;">
+                        <i class="fa-solid fa-trash"></i> Clear Data
+                    </button>
                     <button class="btn btn-outline btn-sm" id="export-btn">
                         <i class="fa-solid fa-download"></i> Export JSON
                     </button>
@@ -362,6 +387,71 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-danger" id="close-modal-btn">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="password-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <i class="fa-solid fa-key modal-icon"></i>
+                <h3>Change Password</h3>
+            </div>
+            <form id="change-password-form">
+                <div class="modal-body">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="old-password">Current Password</label>
+                        <input type="password" id="old-password" required style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password-change">New Password</label>
+                        <input type="password" id="new-password-change" required style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
+                    </div>
+                    <div id="change-password-msg" style="margin-top: 10px; font-size: 0.9em;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" id="close-password-modal-btn" style="margin-right: 10px;">Cancel</button>
+                    <button type="submit" class="btn btn-secondary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Manage Users Modal -->
+    <div id="users-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 600px;">
+            <div class="modal-header">
+                <i class="fa-solid fa-users-gear modal-icon"></i>
+                <h3>User Management</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group-wrap" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                    <h4 style="margin-top: 0; margin-bottom: 15px;">Create New User</h4>
+                    <form id="create-user-form" style="display: flex; gap: 10px; align-items: flex-end;">
+                        <div class="form-group" style="flex: 1; margin: 0;">
+                            <label for="new-username" style="font-size: 0.8em;">Username</label>
+                            <input type="text" id="new-username" required style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
+                        </div>
+                        <div class="form-group" style="flex: 1; margin: 0;">
+                            <label for="new-password" style="font-size: 0.8em;">Password</label>
+                            <input type="password" id="new-password" required style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm" style="padding: 10px 15px;">
+                            <i class="fa-solid fa-plus"></i> Add
+                        </button>
+                    </form>
+                    <div id="create-user-msg" style="margin-top: 10px; font-size: 0.85em;"></div>
+                </div>
+                <div class="form-group-wrap">
+                    <h4 style="margin-top: 0; margin-bottom: 15px;">Existing Users</h4>
+                    <ul id="users-list" style="list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.1); border-radius: 6px;">
+                        <li style="padding: 10px;">Loading users...</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="close-users-modal-btn">Close Panel</button>
             </div>
         </div>
     </div>
